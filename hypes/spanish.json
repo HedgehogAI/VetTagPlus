@@ -1,0 +1,6 @@
+{
+  "glove_path": "/home/anie/fasttext/wiki.es.vec",
+  "data_dir": "/home/anie/DisExtract/data/gigaword_es",
+  "gw_es_5": "discourse_ES_FIVE_2018jan23",
+  "gw_es_1M_5": "discourse_ES_FIVE_mostly_balanced_1Mcutoff_2018jan25"
+}

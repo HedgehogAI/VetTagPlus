@@ -1,0 +1,14 @@
+{
+  "glove_path": "/home/anie/glove/glove.840B.300d.txt",
+  "data_dir": "/home/anie/DisExtract/data/books",
+  "bpe_encoder_path": "/home/anie/DisExtract/transformer/params/encoder_bpe_40000.json",
+  "bpe_vocab_path": "/home/anie/DisExtract/transformer/params/vocab_40000.bpe",
+  "params_path": "/home/anie/DisExtract/transformer/params/",
+  "dat": "discourse_EN_DAT_ALL_2018feb26",
+  "books_5": "discourse_EN_FIVE_and_but_because_if_when_2017dec12",
+  "books_8": "discourse_EN_EIGHT_and_but_because_if_when_before_so_though_2017dec18",
+  "books_all": "discourse_EN_ALL_and_then_because_though_still_after_when_while_but_also_as_so_although_before_if_2017dec21",
+  "books_old_5": "discourse_EN_OLD_FIVE_so_but_because_if_when_2017dec27",
+  "books_perfectly_balanced": "discourse_EN_ALL_15_perfectly_balanced_2018jan11",
+  "books_mostly_balanced": "discourse_EN_ALL_15_mostly_balanced_cutoff_57816_2018jan11"
+}
