@@ -128,11 +128,12 @@ class DisSentT(nn.Module):
         self.config = config
 
         self.classifier = nn.Sequential(
-            nn.Linear(config['d_model'] * 4, config['fc_dim']),
+            nn.Linear(config['d_model'] * 4 * 4, config['fc_dim']),
             nn.Linear(config['fc_dim'], config['fc_dim']),
             nn.Linear(config['fc_dim'], config['n_classes'])
         )
 
+        self.project = nn.Linear(config['d_model'], config['d_model'] * 4)
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
 
     def encode(self, tgt, tgt_mask):
@@ -157,6 +158,11 @@ class DisSentT(nn.Module):
             u, v = self.pick_h(u_h, batch.s1_lengths), self.pick_h(v_h, batch.s2_lengths)
         else:
             u, v = u_h[:, -1, :], v_h[:, -1, :] # last hidden state
+
+        # self.project(u_h) -- u_h: (batch_size, time_step, d_model)
+        # --> u = self.project(u_h), u: (batch_size, d_model * n_head) n_head = 4 
+        u = F.relu(self.project(u))
+        v = F.relu(self.project(v))
 
         features = torch.cat((u, v, u - v, u * v), 1)
         clf_output = self.classifier(features)
