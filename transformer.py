@@ -155,18 +155,16 @@ class DisSentT(nn.Module):
         u_h = self.encode(batch.s1, batch.s1_mask)
         v_h = self.encode(batch.s2, batch.s2_mask)
 
-        # self.project(u_h) -- u_h: (batch_size, time_step, d_model)
-        # --> u = self.project(u_h), u: (batch_size, d_model * n_head) n_head = 4 
-        # assert(u_h.shape == (batch_size, time_step, d_model * proj_head))
-        # assert(v_h.shape == (batch_size, time_step, d_model * proj_head))
-        u_h = self.projection_layer(u_h, u_h, u_h, batch.s1_mask)
-        v_h = self.projection_layer(v_h, v_h, v_h, batch.s2_mask)
-
-        # u_h, v_h: (batch_size, time_step, d_model * proj_head) (which is n_embed)
+        # u_h, v_h: (batch_size, time_step, d_model) (which is n_embed)
         if self.config['pick_hid']:
             u, v = self.pick_h(u_h, batch.s1_lengths), self.pick_h(v_h, batch.s2_lengths)
         else:
             u, v = u_h[:, -1, :], v_h[:, -1, :] # last hidden state
+
+        # self.project(u_h) -- u_h: (batch_size, time_step, d_model)
+        # --> u = self.project(u_h), u: (batch_size, d_model * n_head) n_head = 4 
+        u = self.projection_layer(u, u_h, u_h, batch.s1_mask)
+        v = self.projection_layer(v, v_h, v_h, batch.s2_mask)
 
         features = torch.cat((u, v, u - v, u * v), 1)
         clf_output = self.classifier(features)
@@ -292,10 +290,10 @@ class MultiHeadedAttentionProjection(nn.Module):
         self.d_k = d_model // h
         self.h = h
         if proj_type == 1:
-            self.linears = clones(nn.Linear(d_model, d_model * h), 3)
+            self.linear = nn.Linear(d_model, d_model * h)
             self.linear_out = nn.Linear(d_model, d_model)
         elif proj_type == 2:
-            self.linears = clones(nn.Linear(d_model, d_model), 3)
+            self.linear = nn.Linear(d_model, d_model)
             self.linear_out = nn.Linear(d_model, d_model * h)
         self.attn = None
         self.dropout = nn.Dropout(p=dropout)
@@ -309,9 +307,12 @@ class MultiHeadedAttentionProjection(nn.Module):
         nbatches = query.size(0)
         nd = self.d_model if self.proj_type == 1 else self.d_k
         # 1) Do all the linear projections in batch from d_model => h x d_k
-        query, key, value = \
-            [l(x).view(nbatches, -1, self.h, nd).transpose(1, 2)
-             for l, x in zip(self.linears, (query, key, value))]
+        # query, key, value = \
+        #     [l(x).view(nbatches, -1, self.h, nd).transpose(1, 2)
+        #      for l, x in zip(self.linears, (query, key, value))]
+        query = self.linear(query).view(nbatches, -1, self.h, nd).transpose(1, 2)
+        key = key.repeat(1, 1, self.h).view(nbatches, -1, self.h, nd).transpose(1, 2)
+        value = value.repeat(1, 1, self.h).view(nbatches, -1, self.h, nd).transpose(1, 2)
 
         # 2) Apply attention on all the projected vectors in batch.
         x, self.attn = attention(query, key, value, mask=mask,
@@ -319,7 +320,7 @@ class MultiHeadedAttentionProjection(nn.Module):
 
         # 3) "Concat" using a view and apply a final linear.
         x = x.transpose(1, 2).contiguous() \
-            .view(nbatches, -1, self.h * nd)
+            .view(nbatches, self.h * nd)
         return self.linear_out(x)
 
 
