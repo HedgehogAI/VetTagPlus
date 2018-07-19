@@ -44,6 +44,7 @@ parser.add_argument("--dpout", type=float, default=0.1, help="residual, embeddin
 parser.add_argument("--dpout_fc", type=float, default=0., help="classifier dropout")
 parser.add_argument("--maxlr", type=float, default=2.5e-4, help="this is not used...")
 parser.add_argument("--warmup_steps", type=int, default=8000, help="OpenNMT uses steps")
+# TransformerLM uses 0.2% of training data as warmup step, that's 5785 for DisSent5/8, and 8471 for DisSent-All
 parser.add_argument("--factor", type=float, default=1.0, help="learning rate scaling factor")
 parser.add_argument("--l2", type=float, default=0.01, help="on non-bias non-gain weights")
 parser.add_argument("--max_norm", type=float, default=2., help="max norm (grad clipping). Original paper uses 1.")
@@ -52,6 +53,8 @@ parser.add_argument('--lm_coef', type=float, default=0.5)
 parser.add_argument("--train_emb", action='store_true', help="Initialize embedding randomly, and then learn it, default to False")
 parser.add_argument("--pick_hid", action='store_true', help="Pick correct hidden states")
 parser.add_argument("--tied", action='store_true', help="Tie weights to embedding, should be always flagged True")
+parser.add_argument("--proj_head", type=int, default=1, help="last docoder layer head number")
+parser.add_argument("--proj_type", type=int, default=1, help="last decoder layer blow up type, 1 for initial linear transformation, 2 for final linear transformation")
 # for now we fix non-linearity to whatever PyTorch provides...could be SELU
 
 # model
@@ -63,8 +66,7 @@ parser.add_argument("--fc_dim", type=int, default=512, help="nhid of fc layers")
 # parser.add_argument("--pool_type", type=str, default='max', help="flag if we do max pooling, which hasn't been done before")
 parser.add_argument("--reload_val", action='store_true', help="Reload the previous best epoch on validation, should "
                                                               "be used with tied weights")
-parser.add_argument("--proj_head", type=int, default=4, help="last docoder layer head number")
-parser.add_argument("--proj_type", type=int, default=1, help="last decoder layer blow up type, 1 for initial linear transformation, 2 for final linear transformation")
+parser.add_argument("--no_stop", action='store_true', help="no early stopping")
 
 # gpu
 parser.add_argument("--gpu_id", type=int, default=-1, help="GPU ID")
@@ -441,7 +443,7 @@ def evaluate(epoch, eval_type='valid', final_eval=False, save_confusion=False):
         else:
             # early stopping (at 2nd decrease in accuracy)
             stop_training = adam_stop
-            adam_stop = True
+            adam_stop = True if not params.no_stop else False
 
             # now we finished annealing, we can reload
             if params.reload_val:
