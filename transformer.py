@@ -120,7 +120,7 @@ class DisSentT(nn.Module):
     other models.
     """
 
-    def __init__(self, config, decoder, tgt_embed, generator):
+    def __init__(self, config, decoder, tgt_embed, generator, projection_layer):
         super(DisSentT, self).__init__()
         self.decoder = decoder
         self.tgt_embed = tgt_embed
@@ -128,12 +128,13 @@ class DisSentT(nn.Module):
         self.config = config
 
         self.classifier = nn.Sequential(
-            nn.Linear(config['d_model'] * 4 * 4, config['fc_dim']),
+            nn.Linear(config['d_model'] * config['proj_head'] * 4 , config['fc_dim']),
             nn.Linear(config['fc_dim'], config['fc_dim']),
             nn.Linear(config['fc_dim'], config['n_classes'])
         )
 
-        self.project = nn.Linear(config['d_model'], config['d_model'] * 4)
+        self.projection_layer = projection_layer
+
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
 
     def encode(self, tgt, tgt_mask):
@@ -153,16 +154,19 @@ class DisSentT(nn.Module):
         # this computes LM targets!! before the Generator
         u_h = self.encode(batch.s1, batch.s1_mask)
         v_h = self.encode(batch.s2, batch.s2_mask)
-        # u_h, v_h: (batch_size, time_step, d_model) (which is n_embed)
+
+        # self.project(u_h) -- u_h: (batch_size, time_step, d_model)
+        # --> u = self.project(u_h), u: (batch_size, d_model * n_head) n_head = 4 
+        # assert(u_h.shape == (batch_size, time_step, d_model * proj_head))
+        # assert(v_h.shape == (batch_size, time_step, d_model * proj_head))
+        u_h = self.projection_layer(u_h, u_h, u_h, batch.s1_mask)
+        v_h = self.projection_layer(v_h, v_h, v_h, batch.s2_mask)
+
+        # u_h, v_h: (batch_size, time_step, d_model * proj_head) (which is n_embed)
         if self.config['pick_hid']:
             u, v = self.pick_h(u_h, batch.s1_lengths), self.pick_h(v_h, batch.s2_lengths)
         else:
             u, v = u_h[:, -1, :], v_h[:, -1, :] # last hidden state
-
-        # self.project(u_h) -- u_h: (batch_size, time_step, d_model)
-        # --> u = self.project(u_h), u: (batch_size, d_model * n_head) n_head = 4 
-        u = F.relu(self.project(u))
-        v = F.relu(self.project(v))
 
         features = torch.cat((u, v, u - v, u * v), 1)
         clf_output = self.classifier(features)
@@ -192,6 +196,7 @@ def make_model(encoder, config, word_embeddings=None): # , ctx_embeddings=None
     "Helper: Construct a model from hyperparameters."
     c = copy.deepcopy
     attn = MultiHeadedAttention(config['n_heads'], config['d_model'])
+    attn_projection = MultiHeadedAttentionProjection(config['proj_head'], config['d_model'], config['proj_type'])
     ff = PositionwiseFeedForward(config['d_model'], config['d_ff'], config['dpout'])
     position = PositionalEncoding(config) # ctx_embeddings
 
@@ -211,7 +216,8 @@ def make_model(encoder, config, word_embeddings=None): # , ctx_embeddings=None
             DecoderLayer(config['d_model'], c(attn), c(ff), config['dpout']),
             config['n_layers']),
         nn.Sequential(embedding_layer, c(position)),
-        generator
+        generator,
+        attn_projection
     )
 
     # This was important from their code.
@@ -274,6 +280,47 @@ class MultiHeadedAttention(nn.Module):
         x = x.transpose(1, 2).contiguous() \
             .view(nbatches, -1, self.h * self.d_k)
         return self.linears[-1](x)
+
+
+class MultiHeadedAttentionProjection(nn.Module):
+    def __init__(self, h, d_model, proj_type=1, dropout=0.1):
+        "Take in model size and number of heads."
+        super(MultiHeadedAttentionProjection, self).__init__()
+        assert d_model % h == 0
+        # We assume d_v always equals d_k
+        self.d_model = d_model
+        self.d_k = d_model // h
+        self.h = h
+        if proj_type == 1:
+            self.linears = clones(nn.Linear(d_model, d_model * h), 3)
+            self.linear_out = nn.Linear(d_model, d_model)
+        elif proj_type == 2:
+            self.linears = clones(nn.Linear(d_model, d_model), 3)
+            self.linear_out = nn.Linear(d_model, d_model * h)
+        self.attn = None
+        self.dropout = nn.Dropout(p=dropout)
+        self.proj_type = proj_type
+
+    def forward(self, query, key, value, mask=None):
+        "Implements Figure 2"
+        if mask is not None:
+            # Same mask applied to all h heads.-
+            mask = mask.unsqueeze(1)
+        nbatches = query.size(0)
+        nd = self.d_model if self.proj_type == 1 else self.d_k
+        # 1) Do all the linear projections in batch from d_model => h x d_k
+        query, key, value = \
+            [l(x).view(nbatches, -1, self.h, nd).transpose(1, 2)
+             for l, x in zip(self.linears, (query, key, value))]
+
+        # 2) Apply attention on all the projected vectors in batch.
+        x, self.attn = attention(query, key, value, mask=mask,
+                                 dropout=self.dropout)
+
+        # 3) "Concat" using a view and apply a final linear.
+        x = x.transpose(1, 2).contiguous() \
+            .view(nbatches, -1, self.h * nd)
+        return self.linear_out(x)
 
 
 class PositionwiseFeedForward(nn.Module):

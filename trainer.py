@@ -63,6 +63,8 @@ parser.add_argument("--fc_dim", type=int, default=512, help="nhid of fc layers")
 # parser.add_argument("--pool_type", type=str, default='max', help="flag if we do max pooling, which hasn't been done before")
 parser.add_argument("--reload_val", action='store_true', help="Reload the previous best epoch on validation, should "
                                                               "be used with tied weights")
+parser.add_argument("--proj_head", type=int, default=4, help="last docoder layer head number")
+parser.add_argument("--proj_type", type=int, default=1, help="last decoder layer blow up type, 1 for initial linear transformation, 2 for final linear transformation")
 
 # gpu
 parser.add_argument("--gpu_id", type=int, default=-1, help="GPU ID")
@@ -193,7 +195,9 @@ config_dis_model = {
     'gpu_id': params.gpu_id,
     'train_emb': params.train_emb,
     'pick_hid': params.pick_hid,
-    'tied': params.tied
+    'tied': params.tied,
+    'proj_head': params.proj_head,
+    'proj_type': params.proj_type
 }
 
 # TODO: reload model in here...
