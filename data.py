@@ -124,8 +124,7 @@ def get_dis(data_dir, prefix, discourse_tag="csu"):
             for line in f:
                 columns = line.split('\t')
                 # we use this to avoid/skip lines that are empty
-                if len(columns) != 1:
-                    continue
+                if len(columns[0].split()) > 200: continue # cutdown to max 200 tokens
                 s1[data_type]['sent'].append(columns[0])
                 target[data_type]['data'].append(dis_map['TODO'])
 
