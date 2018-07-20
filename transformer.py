@@ -128,7 +128,7 @@ class DisSentT(nn.Module):
         self.config = config
 
         self.classifier = nn.Sequential(
-            nn.Linear(config['d_model'] * config['proj_head'] * 4 , config['fc_dim']),
+            nn.Linear(config['d_model'] * config['proj_head'], config['fc_dim']),
             nn.Linear(config['fc_dim'], config['fc_dim']),
             nn.Linear(config['fc_dim'], config['n_classes'])
         )
@@ -156,37 +156,36 @@ class DisSentT(nn.Module):
         corr_mask = torch.stack(corr_mask, dim=0)
         return corr_mask
 
-    def forward(self, batch, lm=True):
+    def forward(self, batch, clf=True, lm=True):
         "Take in and process masked src and target sequences."
         # this computes LM targets!! before the Generator
         u_h = self.encode(batch.s1, batch.s1_mask)
-        v_h = self.encode(batch.s2, batch.s2_mask)
 
-        # u_h, v_h: (batch_size, time_step, d_model) (which is n_embed)
-        if self.config['pick_hid']:
-            u, v = self.pick_h(u_h, batch.s1_lengths), self.pick_h(v_h, batch.s2_lengths)
-        else:
-            u, v = u_h[:, -1, :], v_h[:, -1, :] # last hidden state
+        if clf:
+            # u_h, v_h: (batch_size, time_step, d_model) (which is n_embed)
+            if self.config['pick_hid']:
+                u = self.pick_h(u_h, batch.s1_lengths)
+            else:
+                u = u_h[:, -1, :] # last hidden state
 
-        # self.project(u_h) -- u_h: (batch_size, time_step, d_model)
-        # --> u = self.project(u_h), u: (batch_size, d_model * n_head) n_head = 4
-        if self.config['proj_head'] != 1:
-            picked_s1_mask = self.pick_mask(batch.s1_mask, batch.s1_lengths)
-            picked_s2_mask = self.pick_mask(batch.s2_mask, batch.s2_lengths)
-            u = self.projection_layer(u, u_h, u_h, picked_s1_mask)
-            v = self.projection_layer(v, v_h, v_h, picked_s2_mask)
+            # self.project(u_h) -- u_h: (batch_size, time_step, d_model)
+            # --> u = self.project(u_h), u: (batch_size, d_model * n_head) n_head = 4
+            if self.config['proj_head'] != 1:
+                picked_s1_mask = self.pick_mask(batch.s1_mask, batch.s1_lengths)
+                u = self.projection_layer(u, u_h, u_h, picked_s1_mask)
 
-        features = torch.cat((u, v, u - v, u * v), 1)
-        clf_output = self.classifier(features)
+            clf_output = self.classifier(u)
 
         # compute LM
         if lm:
             s1_y = self.generator(u_h)
-            s2_y = self.generator(v_h)
 
-            return clf_output, s1_y, s2_y
-
-        return clf_output
+        if clf and lm:
+            return clf_output, s1_y
+        elif clf:   
+            return clf_output
+        elif lm:
+            return s1_y
 
     def compute_clf_loss(self, logits, labels):
         return self.ce_loss(logits, labels).mean()

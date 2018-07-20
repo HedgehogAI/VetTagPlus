@@ -18,27 +18,14 @@ import spacy
 from tqdm import tqdm
 import numpy as np
 
-from preprocessing.cfg import EN_FIVE_DISCOURSE_MARKERS, EN_EIGHT_DISCOURSE_MARKERS, \
-    EN_DISCOURSE_MARKERS, EN_OLD_FIVE_DISCOURSE_MARKERS, CH_FIVE_DISCOURSE_MARKERS, SP_FIVE_DISCOURSE_MARKERS
-
 
 def get_labels(corpus):
-    if corpus == "books_5":
-        labels = EN_FIVE_DISCOURSE_MARKERS
-    elif corpus == "books_old_5":
-        labels = EN_OLD_FIVE_DISCOURSE_MARKERS
-    elif corpus == "books_8":
-        labels = EN_EIGHT_DISCOURSE_MARKERS
-    elif corpus == "books_all" or corpus == "books_perfectly_balanced" or corpus == "books_mostly_balanced":
-        labels = EN_DISCOURSE_MARKERS
-    elif corpus == "gw_cn_5":
-        labels = CH_FIVE_DISCOURSE_MARKERS
-    elif corpus == "gw_es_5":
-        labels = SP_FIVE_DISCOURSE_MARKERS
-    elif corpus == "gw_es_1M_5":
-        labels = SP_FIVE_DISCOURSE_MARKERS
-    elif corpus == 'dat':
-        labels = ['entail', 'contradict']
+    if corpus == "csu":
+        labels = ['TODO']
+    elif corpus == "pp":
+        labels = ['TODO']
+    elif corpus == "sage":
+        labels = ['TODO']
     else:
         raise Exception("corpus not found")
 
