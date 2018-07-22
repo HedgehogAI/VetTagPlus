@@ -1,8 +1,7 @@
 {
-  "glove_path": "/home/anie/glove/glove.840B.300d.txt",
-  "data_dir": "/home/anie/DisExtract/data/books",
-  "bpe_encoder_path": "/home/anie/DisExtract/transformer/params/encoder_bpe_40000.json",
-  "bpe_vocab_path": "/home/anie/DisExtract/transformer/params/vocab_40000.bpe",
+  "data_dir": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/sage/",
+  "bpe_encoder_path": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/encoder_bpe_40000.json",
+  "bpe_vocab_path": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/vocab_40000.bpe",
   "params_path": "/home/anie/DisExtract/transformer/params/",
-  "sage": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/sage/sage_ascii"
+  "sage": "sage_ascii"
 }
