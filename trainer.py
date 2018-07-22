@@ -22,7 +22,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 
 from data import get_dis, pad_batch, Batch
-from util import get_labels, TextEncoder
+from util import get_labels, TextEncoder, batchify
 from transformer import NoamOpt, make_model
 
 import logging
@@ -38,7 +38,7 @@ parser.add_argument("--outputmodelname", type=str, default='dis-model')
 parser.add_argument("--n_epochs", type=int, default=10)
 parser.add_argument("--cur_epochs", type=int, default=1)
 parser.add_argument("--cur_valid", type=float, default=-1e10, help="must set this otherwise resumed model will be saved by default")
-
+parser.add_argument("--bptt_size", type=int, default=50)
 parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--dpout", type=float, default=0.1, help="residual, embedding, attention dropout") # 3 dropouts
 parser.add_argument("--dpout_fc", type=float, default=0., help="classifier dropout")
@@ -131,9 +131,7 @@ DATA
 """
 train, valid, test = get_dis(data_dir, prefix, params.corpus)  # this stays the same
 
-# word_vec = build_vocab(train['s1'] + train['s2'] +
-#                        valid['s1'] + valid['s2'] +
-#                        test['s1'] + test['s2'], glove_path)
+# word_vec = build_vocab(train['s1'] + valid['s1'] + test['s1'], glove_path)
 # batching function needs to be different:
 # 1). return s1, s2, y_label
 
@@ -146,34 +144,40 @@ for split in ['s1']:
         num_sents = []
         y_sents = []
         for sent in eval(data_type)[split]:
-            num_sent = text_encoder.encode([sent], verbose=False, lazy=True)[0]
-            num_sents.append([encoder['_start_']] + num_sent + [encoder['_end_']])
+            num_sent = text_encoder.encode([sent], verbose=False, lazy=True, bpe=False)[0]
+            # num_sents.append([encoder['_start_']] + num_sent + [encoder['_end_']])
+            num_sents.append(num_sent)
             # y_sents.append(num_sent + [encoder['_end_']])
             max_len = max_len if max_len > len(num_sent) + 1 else len(num_sent) + 1
-        eval(data_type)[split] = np.array(num_sents)
+        # print num_sents[0]
+        eval(data_type)[split] = batchify(np.array(num_sents[0]), params.batch_size)
         # eval(data_type)['y_'+split] = np.array(y_sents)
-
+print max_len
+print train['s1'].shape
+print valid['s1'].shape
+print test['s1'].shape
 """
 Params
 2. Load in parameters (word embeddings)
 """
 
-shapes = json.load(open(pjoin(params_path, 'params_shapes.json')))
-offsets = np.cumsum([np.prod(shape) for shape in shapes])
-init_params = [np.load(pjoin(params_path, 'params_{}.npy'.format(n))) for n in range(3)]
-init_params = np.split(np.concatenate(init_params, 0), offsets[:2])[:-1]
-init_params = [param.reshape(shape) for param, shape in zip(init_params, shapes[:2])]
+# shapes = json.load(open(pjoin(params_path, 'params_shapes.json')))
+# offsets = np.cumsum([np.prod(shape) for shape in shapes])
+# init_params = [np.load(pjoin(params_path, 'params_{}.npy'.format(n))) for n in range(3)]
+# init_params = np.split(np.concatenate(init_params, 0), offsets[:2])[:-1]
+# init_params = [param.reshape(shape) for param, shape in zip(init_params, shapes[:2])]
 
-n_special = 3  # <s>, </s>, <pad>
-n_ctx = 1024
+# n_special = 3  # <s>, </s>, <pad>
+# n_ctx = 1024
 
-init_params[0] = init_params[0][:n_ctx]
-word_embeddings = np.concatenate([init_params[1],
-                                   np.zeros((1, params.d_model), np.float32), # pad, zero-value!
-                                  (np.random.randn(n_special-1, params.d_model)*0.02).astype(np.float32)], 0)
-ctx_embeddings = init_params[0]
-del init_params[1]
+# init_params[0] = init_params[0][:n_ctx]
+# word_embeddings = np.concatenate([init_params[1],
+#                                    np.zeros((1, params.d_model), np.float32), # pad, zero-value!
+#                                   (np.random.randn(n_special-1, params.d_model)*0.02).astype(np.float32)], 0)
+# ctx_embeddings = init_params[0]
+# del init_params[1]
 
+word_embeddings = (np.random.randn(len(encoder), params.d_model)*0.02).astype(np.float32)
 
 dis_labels = get_labels(params.corpus)
 label_size = len(dis_labels)
@@ -243,22 +247,29 @@ def trainepoch(epoch):
     words_count = 0
 
     last_time = time.time()
-    correct = 0.
+    # correct = 0.
     # shuffle the data
-    permutation = np.random.permutation(len(train['s1']))
+    # permutation = np.random.permutation(len(train['s1']))
 
-    s1 = train['s1'][permutation]
-    target = train['label'][permutation]
+    # s1 = train['s1'][permutation]
+    # target = train['label'][permutation]
+    s1 = train['s1']
 
     if model_opt._step == 0:
         logger.info('Current learning rate : {0}'.format(model_opt.rate(1)))
     else:
         logger.info('Current learning rate : {0}'.format(model_opt.rate()))
 
-    for stidx in range(0, len(s1), params.batch_size):
+    # for stidx in range(0, len(s1), params.batch_size):
+    for stidx in range(0, s1.shape[1], params.bptt_size):
         # prepare batch
-        s1_batch = pad_batch(s1[stidx:stidx + params.batch_size], encoder['_pad_'])
-        label_batch = target[stidx:stidx + params.batch_size]
+        # s1_batch = pad_batch(s1[stidx:stidx + params.batch_size], encoder['_pad_'])
+        # label_batch = target[stidx:stidx + params.batch_size]
+        pad_start = np.ones([s1.shape[0], 1]) * encoder['_start_']
+        pad_end = np.ones([s1.shape[0], 1]) * encoder['_end_']
+        s1_batch = np.concatenate([pad_start, s1[:, stidx: stidx + params.bptt_size], pad_end], 1).astype(np.int64)
+        # print 's1_batch_shape', s1_batch.shape
+        label_batch = np.ones(s1.shape[0])
         b = Batch(s1_batch, label_batch, encoder['_pad_'], gpu_id=params.gpu_id)
 
         # s1_batch, s2_batch = Variable(s1_batch.cuda()), Variable(s2_batch.cuda())
@@ -291,16 +302,19 @@ def trainepoch(epoch):
         model_opt.step()
 
         if len(all_costs) == params.log_interval:
-            logs.append('{0} ; loss {1} ; sentence/s {2} ; words/s {3} ; accuracy train: {4} ; lr: {5}'.format(
+            logs.append('{0} ; loss {1} ; sentence/s {2} ; words/s {3} ; perplexity: {4} ; lr: {5} ; embed_norm: {6}'.format(
                 stidx, round(np.mean(all_costs), 2),
                 int(len(all_costs) * params.batch_size / (time.time() - last_time)),
                 int(words_count * 1.0 / (time.time() - last_time)),
-                0, #round(100. * correct / (stidx + k), 2),
-                model_opt.rate()))
+                round(np.exp(np.mean(all_costs)), 2), #acc: round(100. * correct / (stidx + k), 2),
+                model_opt.rate(),
+                dis_net.tgt_embed[0].lut.weight.data.norm()))
             logger.info(logs[-1])
             last_time = time.time()
             words_count = 0
             all_costs = []
+    torch.save(dis_net, os.path.join(params.outputdir, params.outputmodelname + "-" + str(epoch) + ".pickle"))
+
     # train_acc = round(100 * correct / len(s1), 2)
     # logger.info('results : epoch {0} ; mean accuracy train : {1}'
                 # .format(epoch, train_acc))
@@ -453,7 +467,8 @@ if __name__ == '__main__':
     epoch = params.cur_epochs  # start at 1
 
     while not stop_training and epoch <= params.n_epochs:
-        train_acc = trainepoch(epoch)
+        trainepoch(epoch)
+        # train_acc = trainepoch(epoch)
         # eval_acc = evaluate(epoch, 'valid')
         epoch += 1
 

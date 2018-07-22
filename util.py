@@ -118,7 +118,7 @@ class TextEncoder(object):
         self.cache[token] = word
         return word
 
-    def encode(self, texts, verbose=True, lazy=False):
+    def encode(self, texts, verbose=True, lazy=False, bpe=False):
         # lazy: not using ftfy, SpaCy, or regex. DisSent is processed.
         texts_tokens = []
         if verbose:
@@ -127,7 +127,10 @@ class TextEncoder(object):
                 text_tokens = []
                 for token in text:
                     token_text = token.text if not lazy else token
-                    text_tokens.extend([self.encoder.get(t, 0) for t in self.bpe(token_text.lower()).split(' ')])
+                    if bpe:
+                        text_tokens.extend([self.encoder.get(t, 0) for t in self.bpe(token_text.lower()).split(' ')])
+                    else:
+                        text_tokens.append(self.encoder.get(token_text, 0))
                 texts_tokens.append(text_tokens)
         else:
             for text in texts:
@@ -135,7 +138,11 @@ class TextEncoder(object):
                 text_tokens = []
                 for token in text:
                     token_text = token.text if not lazy else token
-                    text_tokens.extend([self.encoder.get(t, 0) for t in self.bpe(token_text.lower()).split(' ')])
+                    if bpe:
+                        text_tokens.extend([self.encoder.get(t, 0) for t in self.bpe(token_text.lower()).split(' ')])
+                    else:
+                        text_tokens.append(self.encoder.get(token_text, 0)) # no-oov guarantee
+                        assert self.encoder.get(token_text, 0) < len(self.encoder)
                 texts_tokens.append(text_tokens)
         return texts_tokens
 
@@ -152,6 +159,46 @@ def make_path(f):
     if d and not os.path.exists(d):
         os.makedirs(d)
     return f
+
+
+def build_vocab(sents, specials):
+    word2id = {}
+    id2word = {}
+    for sent in sents:
+        words = sent.strip().split()
+        for word in words:
+            if word not in word2id:
+                word2id[word] = len(word2id)
+                id2word[len(id2word)] = word
+    for word in specials:
+        word2id[word] = len(word2id)
+        id2word[len(id2word)] = word
+    return word2id, id2word
+
+
+# def batchify(data, bsz):
+#     # Work out how cleanly we can divide the dataset into bsz parts.
+#     nbatch = data.size(0) // bsz
+#     # Trim off any extra elements that wouldn't cleanly fit (remainders).
+#     data = data.narrow(0, 0, nbatch * bsz)
+#     # Evenly divide the data across the bsz batches.
+#     data = data.view(bsz, -1).t().contiguous()
+#     return data
+
+
+def batchify(data, bsz):
+    print data
+    nbatch = data.shape[0] // bsz 
+    data = data[:nbatch*bsz].reshape(bsz, nbatch)
+    print data
+    return data   
+
+
+def get_batch(source, i):
+    seq_len = min(args.bptt, len(source) - 1 - i)
+    data = source[i:i+seq_len]
+    target = source[i+1:i+1+seq_len].view(-1)
+    return data, target
 
 
 class ResultLogger(object):
