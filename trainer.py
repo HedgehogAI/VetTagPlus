@@ -358,119 +358,139 @@ def evaluate(epoch, eval_type='valid', final_eval=False, save_confusion=False):
     global dis_net
 
     dis_net.eval()
-    correct = 0.
+    all_costs = []
+    # correct = 0.
     global val_acc_best, lr, stop_training, adam_stop
 
     if eval_type == 'valid':
         logger.info('\nVALIDATION : Epoch {0}'.format(epoch))
 
     s1 = valid['s1'] if eval_type == 'valid' else test['s1']
-    target = valid['label'] if eval_type == 'valid' else test['label']
+    # target = valid['label'] if eval_type == 'valid' else test['label']
+    # valid_preds, valid_labels = [], []
 
-    valid_preds, valid_labels = [], []
-
-    for stidx in range(0, len(s1), params.batch_size):
+    for stidx in range(0, s1.shape[1], params.bptt_size):
         # prepare batch
-        s1_batch = pad_batch(s1[stidx:stidx + params.batch_size], encoder['_pad_'])
-        label_batch = target[stidx:stidx + params.batch_size]
+        # s1_batch = pad_batch(s1[stidx:stidx + params.batch_size], encoder['_pad_'])
+        # label_batch = target[stidx:stidx + params.batch_size]
+        pad_start = np.ones([s1.shape[0], 1]) * encoder['_start_']
+        pad_end = np.ones([s1.shape[0], 1]) * encoder['_end_']
+        s1_batch = np.concatenate([pad_start, s1[:, stidx: stidx + params.bptt_size], pad_end], 1).astype(np.int64)
+        # print 's1_batch_shape', s1_batch.shape
+        label_batch = np.ones(s1.shape[0])
         b = Batch(s1_batch, label_batch, encoder['_pad_'], gpu_id=params.gpu_id)
 
-        # model forward
-        clf_output = dis_net(b, clf=True, lm=False)
+        s1_y_hat = dis_net(b, clf=False, lm=True)
+        s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
+        loss = s1_lm_loss
+        all_costs.append(loss.data[0])
 
-        pred = clf_output.data.max(1)[1]
-        correct += pred.long().eq(b.label.data.long()).cpu().sum()
+    logger.info(('loss {0} ; perplexity: {1} ; embed_norm: {2}'.format(
+                round(np.mean(all_costs), 2),
+                round(np.exp(np.mean(all_costs)), 2), #acc: round(100. * correct / (stidx + k), 2),
+                dis_net.tgt_embed[0].lut.weight.data.norm())))
+        # model forward
+        # clf_output = dis_net(b, clf=True, lm=False)
+
+        # pred = clf_output.data.max(1)[1]
+        # correct += pred.long().eq(b.label.data.long()).cpu().sum()
 
         # we collect samples
-        labels = target[stidx:stidx + params.batch_size]
-        preds = pred.cpu().numpy()
+        # labels = target[stidx:stidx + params.batch_size]
+        # preds = pred.cpu().numpy()
 
-        valid_preds.extend(preds.tolist())
-        valid_labels.extend(labels.tolist())
+        # valid_preds.extend(preds.tolist())
+        # valid_labels.extend(labels.tolist())
 
-    mean_multi_recall = get_multiclass_recall(np.array(valid_preds), np.array(valid_labels))
-    mean_multi_prec = get_multiclass_prec(np.array(valid_preds), np.array(valid_labels))
+    # mean_multi_recall = get_multiclass_recall(np.array(valid_preds), np.array(valid_labels))
+    # mean_multi_prec = get_multiclass_prec(np.array(valid_preds), np.array(valid_labels))
 
-    multiclass_recall_msg = 'Multiclass Recall - '
-    for k, v in mean_multi_recall.iteritems():
-        multiclass_recall_msg += dis_labels[k] + ": " + str(v[0]) + " "
+    # multiclass_recall_msg = 'Multiclass Recall - '
+    # for k, v in mean_multi_recall.iteritems():
+        # multiclass_recall_msg += dis_labels[k] + ": " + str(v[0]) + " "
 
-    multiclass_prec_msg = 'Multiclass Precision - '
-    for k, v in mean_multi_prec.iteritems():
-        if len(v) == 0:
-            v = [0.]
-        multiclass_prec_msg += dis_labels[k] + ": " + str(v[0]) + " "
+    # multiclass_prec_msg = 'Multiclass Precision - '
+    # for k, v in mean_multi_prec.iteritems():
+        # if len(v) == 0:
+            # v = [0.]
+        # multiclass_prec_msg += dis_labels[k] + ": " + str(v[0]) + " "
 
-    logger.info(multiclass_recall_msg)
-    logger.info(multiclass_prec_msg)
+    # logger.info(multiclass_recall_msg)
+    # logger.info(multiclass_prec_msg)
 
     # if params.corpus == "gw_cn_5" or params.corpus == "gw_es_5":
     #     print(multiclass_recall_msg)
     #     print(multiclass_prec_msg)
 
     # save model
-    eval_acc = round(100 * correct / len(s1), 2)
-    if final_eval:
-        logger.info('finalgrep : accuracy {0} : {1}'.format(eval_type, eval_acc))
-    else:
-        logger.info('togrep : results : epoch {0} ; mean accuracy {1} :\
-              {2}'.format(epoch, eval_type, eval_acc))
+    # eval_acc = round(100 * correct / len(s1), 2)
+    # if final_eval:
+        # logger.info('finalgrep : accuracy {0} : {1}'.format(eval_type, eval_acc))
+    # else:
+        # logger.info('togrep : results : epoch {0} ; mean accuracy {1} :\
+              # {2}'.format(epoch, eval_type, eval_acc))
         # print out multi-class recall and precision
 
-    if save_confusion:
-        with open(pjoin(params.outputdir, 'confusion_test.csv'), 'wb') as csvfile:
-            fieldnames = ['preds', 'labels']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
+    # if save_confusion:
+        # with open(pjoin(params.outputdir, 'confusion_test.csv'), 'wb') as csvfile:
+            # fieldnames = ['preds', 'labels']
+            # writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            # writer.writeheader()
 
-            for pair in izip(valid_preds, valid_labels):
-                writer.writerow({'preds': pair[0], 'labels': pair[1]})
+            # for pair in izip(valid_preds, valid_labels):
+                # writer.writerow({'preds': pair[0], 'labels': pair[1]})
 
     # there is no re-loading of previous best model btw
-    if eval_type == 'valid' and epoch <= params.n_epochs:
-        if eval_acc > val_acc_best:
-            logger.info('saving model at epoch {0}'.format(epoch))
-            if not os.path.exists(params.outputdir):
-                os.makedirs(params.outputdir)
-            torch.save(dis_net, os.path.join(params.outputdir,
-                                             params.outputmodelname + ".pickle"))
-            # monitor memory usage
-            try:
-                torch.save(dis_net, os.path.join(params.outputdir,
-                                                 params.outputmodelname + "-" + str(epoch) + ".pickle"))
-            except:
-                print("saving by epoch error, maybe due to disk space limit")
+    # if eval_type == 'valid' and epoch <= params.n_epochs:
+    #     if eval_acc > val_acc_best:
+    #         logger.info('saving model at epoch {0}'.format(epoch))
+    #         if not os.path.exists(params.outputdir):
+    #             os.makedirs(params.outputdir)
+    #         torch.save(dis_net, os.path.join(params.outputdir,
+    #                                          params.outputmodelname + ".pickle"))
+    #         # monitor memory usage
+    #         try:
+    #             torch.save(dis_net, os.path.join(params.outputdir,
+    #                                              params.outputmodelname + "-" + str(epoch) + ".pickle"))
+    #         except:
+    #             print("saving by epoch error, maybe due to disk space limit")
 
-            val_acc_best = eval_acc
+    #         val_acc_best = eval_acc
 
-            if adam_stop is True:
-                # we reset both when there's an improvement
-                adam_stop = False
-                stop_training = False
-        else:
-            # early stopping (at 2nd decrease in accuracy)
-            stop_training = adam_stop
-            adam_stop = True if not params.no_stop else False
+    #         if adam_stop is True:
+    #             # we reset both when there's an improvement
+    #             adam_stop = False
+    #             stop_training = False
+    #     else:
+    #         # early stopping (at 2nd decrease in accuracy)
+    #         stop_training = adam_stop
+    #         adam_stop = True if not params.no_stop else False
 
-            # now we finished annealing, we can reload
-            if params.reload_val:
-                del dis_net
-                dis_net = torch.load(os.path.join(params.outputdir, params.outputmodelname + ".pickle"))
-                logger.info("Load in previous best epoch")
+    #         # now we finished annealing, we can reload
+    #         if params.reload_val:
+    #             del dis_net
+    #             dis_net = torch.load(os.path.join(params.outputdir, params.outputmodelname + ".pickle"))
+    #             logger.info("Load in previous best epoch")
 
-    return eval_acc
+    # return eval_acc
 
 """
 Train model on Discourse Classification task
 """
 if __name__ == '__main__':
+    global dis_net
     epoch = params.cur_epochs  # start at 1
 
-    while not stop_training and epoch <= params.n_epochs:
-        trainepoch(epoch)
-        # train_acc = trainepoch(epoch)
-        # eval_acc = evaluate(epoch, 'valid')
-        epoch += 1
+    del dis_net
+    dis_net = torch.load('/home/yuhuiz/Transformer/exp/sage_lm/dis-model-1.pickle')
+    evaluate(epoch, eval_type='test')
+
+    # while not stop_training and epoch <= params.n_epochs:
+    #     trainepoch(epoch)
+    #     evaluate(epoch)
+    #     # train_acc = trainepoch(epoch)
+    #     # eval_acc = evaluate(epoch, 'valid')
+    #     epoch += 1
 
     # Run best model on test set.
     # del dis_net
