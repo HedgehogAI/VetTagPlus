@@ -23,7 +23,7 @@ import torch.nn as nn
 
 from data import get_dis, pad_batch, Batch
 from util import get_labels, TextEncoder, batchify
-from transformer import NoamOpt, make_model
+from transformer import NoamOpt, make_model, make_lstm_model
 
 import logging
 
@@ -208,7 +208,7 @@ config_dis_model = {
 
 # TODO: reload model in here...
 if params.cur_epochs == 1:
-    dis_net = make_model(encoder, config_dis_model, word_embeddings) # ctx_embeddings
+    dis_net = make_lstm_model(encoder, config_dis_model, word_embeddings) # ctx_embeddings
     logger.info(dis_net)
 else:
     # if starting epoch is not 1, we resume training
@@ -481,16 +481,16 @@ if __name__ == '__main__':
     global dis_net
     epoch = params.cur_epochs  # start at 1
 
-    del dis_net
-    dis_net = torch.load('/home/yuhuiz/Transformer/exp/sage_lm/dis-model-1.pickle')
-    evaluate(epoch, eval_type='test')
+    # del dis_net
+    # dis_net = torch.load('/home/yuhuiz/Transformer/exp/sage_lm/dis-model-1.pickle')
+    # evaluate(epoch, eval_type='test')
 
-    # while not stop_training and epoch <= params.n_epochs:
-    #     trainepoch(epoch)
-    #     evaluate(epoch)
-    #     # train_acc = trainepoch(epoch)
-    #     # eval_acc = evaluate(epoch, 'valid')
-    #     epoch += 1
+    while not stop_training and epoch <= params.n_epochs:
+        trainepoch(epoch)
+        evaluate(epoch)
+        # train_acc = trainepoch(epoch)
+        # eval_acc = evaluate(epoch, 'valid')
+        epoch += 1
 
     # Run best model on test set.
     # del dis_net

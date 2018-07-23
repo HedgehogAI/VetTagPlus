@@ -197,6 +197,35 @@ class DisSentT(nn.Module):
         seq_loss *= s_loss_mask  # mask sequence loss
         return seq_loss.mean()
 
+class LSTMEncoder(nn.Module):
+    def __init__(self, config, decoder, tgt_embed, generator):
+        super(LSTMEncoder, self).__init__()
+        self.decoder = decoder
+        self.tgt_embed = tgt_embed
+        self.generator = generator
+        self.config = config
+        self.ce_loss = nn.CrossEntropyLoss(reduce=False)
+    def encode(self, tgt, tgt_mask):
+        # print tgt_mask
+        # print self.tgt_embed(tgt).shape
+        return self.autolen_rnn(self.tgt_embed(tgt))
+    def autolen_rnn(self, inputs):
+        output, (h, c) = self.decoder(inputs)
+        return output
+    def forward(self, batch, clf=True, lm=True):
+        "Take in and process masked src and target sequences."
+        # this computes LM targets!! before the Generator
+        u_h = self.encode(batch.s1, batch.s1_loss_mask)
+        s1_y = self.generator(u_h)
+        return s1_y
+    def compute_clf_loss(self, logits, labels):
+        return self.ce_loss(logits, labels).mean()
+    def compute_lm_loss(self, s_h, s_y, s_loss_mask):
+        # get the ingredients...compute loss
+        seq_loss = self.ce_loss(s_h.contiguous().view(-1, self.config['n_words']),
+                                s_y.view(-1)).view(s_h.size(0), -1)
+        seq_loss *= s_loss_mask  # mask sequence loss
+        return seq_loss.mean()
 
 def make_model(encoder, config, word_embeddings=None): # , ctx_embeddings=None
     # encoder: dictionary, for vocab
@@ -234,6 +263,37 @@ def make_model(encoder, config, word_embeddings=None): # , ctx_embeddings=None
         if p.dim() > 1 and p.requires_grad is True:
             nn.init.xavier_uniform(p)
     return model
+
+def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=None
+    # encoder: dictionary, for vocab
+    "Helper: Construct a model from hyperparameters."
+    position = PositionalEncoding(config) # ctx_embeddings
+    tgt_embed = nn.Sequential(Embeddings(encoder, config, word_embeddings), position)
+
+    decoder = nn.LSTM(
+        config['d_model'], # <TODO> config.emb_dim
+        config['d_model'], # <TODO> config.hidden_size
+        1,
+        batch_first=True
+    )
+
+    generator = Generator(config['d_model'], len(encoder), word_embedding_weight=tgt_embed[0].lut.weight)
+
+    model = LSTMEncoder(
+        config,
+        decoder,
+        tgt_embed,
+        generator
+    )
+
+    # This was important from their code.
+    # Initialize parameters with Glorot / fan_avg.
+    for p in model.parameters():
+        # we won't update anything that has fixed parameters!
+        if p.dim() > 1 and p.requires_grad is True:
+            nn.init.xavier_uniform(p)
+    return model
+
 
 def subsequent_mask(size):
     "Mask out subsequent positions."

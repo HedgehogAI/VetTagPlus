@@ -1,1 +1,3 @@
-CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/sage_lm --gpu_id 0 --n_epochs 15 --no_stop --train_emb --tied --d_ff 2048 --n_heads 8 --n_layers 6 --batch_size 32 --hypes hypes/default.json
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/sage_lm --gpu_id 0 --n_epochs 15 --no_stop --train_emb --tied --d_ff 2048 --n_heads 8 --n_layers 6 --batch_size 32 --hypes hypes/default.json
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/ptb_lm_lstm --gpu_id 0 --n_epochs 30 --no_stop --train_emb --tied --d_ff 2048 --n_heads 8 --n_layers 6 --bptt_size 50 --batch_size 32 --hypes hypes/default.json
