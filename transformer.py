@@ -271,8 +271,8 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
     tgt_embed = nn.Sequential(Embeddings(encoder, config, word_embeddings), position)
 
     decoder = nn.LSTM(
-        config['d_model'], # <TODO> config.emb_dim
-        config['d_model'], # <TODO> config.hidden_size
+        config['d_model'], # config.emb_dim
+        config['d_model'], # config.hidden_size
         1,
         batch_first=True
     )

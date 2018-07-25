@@ -55,6 +55,7 @@ parser.add_argument("--pick_hid", action='store_true', help="Pick correct hidden
 parser.add_argument("--tied", action='store_true', help="Tie weights to embedding, should be always flagged True")
 parser.add_argument("--proj_head", type=int, default=1, help="last docoder layer head number")
 parser.add_argument("--proj_type", type=int, default=1, help="last decoder layer blow up type, 1 for initial linear transformation, 2 for final linear transformation")
+parser.add_argument("--model_type", type=str, default="transformer", help="transformer|lstm")
 # for now we fix non-linearity to whatever PyTorch provides...could be SELU
 
 # model
@@ -96,6 +97,10 @@ logger = logging.getLogger(__name__)
 if not os.path.exists(params.outputdir):
     os.makedirs(params.outputdir)
 file_handler = logging.FileHandler("{0}/log.txt".format(params.outputdir))
+formatter = logging.Formatter(
+            '[%(asctime)s] %(levelname)s: %(message)s',
+            datefmt='%m/%d/%Y %I:%M:%S %p')
+file_handler.setFormatter(formatter)
 logging.getLogger().addHandler(file_handler)
 
 # print parameters passed, and all parameters
@@ -124,6 +129,7 @@ encoder = text_encoder.encoder
 encoder['_pad_'] = len(encoder)
 encoder['_start_'] = len(encoder)
 encoder['_end_'] = len(encoder)
+encoder['_unk_'] = len(encoder)
 
 """
 DATA
@@ -208,7 +214,12 @@ config_dis_model = {
 
 # TODO: reload model in here...
 if params.cur_epochs == 1:
-    dis_net = make_lstm_model(encoder, config_dis_model, word_embeddings) # ctx_embeddings
+    if params.model_type == "lstm":
+        print 'model lstm'
+        dis_net = make_lstm_model(encoder, config_dis_model, word_embeddings) # ctx_embeddings
+    else:
+        print 'model transformer'
+        dis_net = make_model(encoder, config_dis_model, word_embeddings)
     logger.info(dis_net)
 else:
     # if starting epoch is not 1, we resume training
@@ -478,16 +489,15 @@ def evaluate(epoch, eval_type='valid', final_eval=False, save_confusion=False):
 Train model on Discourse Classification task
 """
 if __name__ == '__main__':
-    global dis_net
     epoch = params.cur_epochs  # start at 1
 
     # del dis_net
-    # dis_net = torch.load('/home/yuhuiz/Transformer/exp/sage_lm/dis-model-1.pickle')
-    # evaluate(epoch, eval_type='test')
-
+    # dis_net = torch.load('/home/yuhuiz/Transformer/exp/sage_lm_lstm/dis-model-9.pickle')
+    
     while not stop_training and epoch <= params.n_epochs:
         trainepoch(epoch)
         evaluate(epoch)
+        evaluate(epoch, eval_type='test')
         # train_acc = trainepoch(epoch)
         # eval_acc = evaluate(epoch, 'valid')
         epoch += 1

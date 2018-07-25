@@ -130,7 +130,7 @@ class TextEncoder(object):
                     if bpe:
                         text_tokens.extend([self.encoder.get(t, 0) for t in self.bpe(token_text.lower()).split(' ')])
                     else:
-                        text_tokens.append(self.encoder.get(token_text, 0))
+                        text_tokens.append(self.encoder.get(token_text, self.encoder['_unk_']))
                 texts_tokens.append(text_tokens)
         else:
             for text in texts:
@@ -141,7 +141,7 @@ class TextEncoder(object):
                     if bpe:
                         text_tokens.extend([self.encoder.get(t, 0) for t in self.bpe(token_text.lower()).split(' ')])
                     else:
-                        text_tokens.append(self.encoder.get(token_text, 0)) # no-oov guarantee
+                        text_tokens.append(self.encoder.get(token_text, self.encoder['_unk_'])) # no-oov guarantee
                         assert self.encoder.get(token_text, 0) < len(self.encoder)
                 texts_tokens.append(text_tokens)
         return texts_tokens
