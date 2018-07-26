@@ -117,7 +117,7 @@ data_dir = json_config['data_dir']
 prefix = json_config[params.corpus]
 bpe_encoder_path = json_config['bpe_encoder_path']
 bpe_vocab_path = json_config['bpe_vocab_path']
-params_path = json_config['params_path']
+# params_path = json_config['params_path']
 
 """
 BPE encoder
