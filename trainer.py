@@ -15,6 +15,8 @@ from data import get_dis, pad_batch, Batch
 from util import get_labels, TextEncoder, batchify
 from transformer import NoamOpt, make_model, make_lstm_model
 import logging
+from sklearn import metrics
+
 
 parser = argparse.ArgumentParser(description='Clinical Dataset')
 # paths
@@ -126,7 +128,7 @@ for split in ['s1']:
                 num_sent = text_encoder.encode([sent], lazy=True, bpe=False)[0]
                 num_sents.append(num_sent)
             else:
-                num_sent = text_encoder.encode([sent], lazy=True, bpe=True)[0]
+                num_sent = text_encoder.encode([sent], lazy=True, bpe=False)[0]
                 num_sents.append([encoder['_start_']] + num_sent + [encoder['_end_']])
             max_len = max_len if max_len > len(num_sent) else len(num_sent)
         if params.corpus == 'sage':
@@ -202,13 +204,11 @@ adam_stop = False
 stop_training = False
 
 def train_epoch_csu(epoch):
+    # initialize
     logger.info('\nTRAINING : Epoch ' + str(epoch))
     dis_net.train()
-    all_costs = []
-    logs = []
-    words_count = 0
-    last_time = time.time()
-    correct = 0.
+    all_costs, all_em, all_micro_p, all_micro_r, all_micro_f1, all_macro_p, all_macro_r, all_macro_f1 = [], [], [], [], [], [], [], []
+
     # shuffle the data
     permutation = np.random.permutation(len(train['s1']))
     s1 = train['s1'][permutation]
@@ -223,18 +223,27 @@ def train_epoch_csu(epoch):
         # model forward
         clf_output, s1_y_hat = dis_net(b, clf=True, lm=True)
 
-        # pred = clf_output.data.max(1)[1]
-        # correct += pred.long().eq(b.label.data.long()).cpu().sum()
-        # assert len(pred) == len(s1[stidx:stidx + params.batch_size])
+        # evaluation
+        pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)
+        em = metrics.accuracy_score(label_batch, pred)
+        p, r, f1, s = metrics.precision_recall_fscore_support(label_batch, pred, average=None)
+        micro_p, micro_r, micro_f1 = np.average(p, weights=s), np.average(r, weights=s), np.average(f1, weights=s)
+        macro_p, macro_r, macro_f1 = np.average(p[p.nonzero()]), np.average(r[r.nonzero()]), np.average(f1[f1.nonzero()])
+        all_em.append(em)
+        all_micro_p.append(micro_p)
+        all_micro_r.append(micro_r)
+        all_micro_f1.append(micro_f1)
+        all_macro_p.append(macro_p)
+        all_macro_r.append(macro_r)
+        all_macro_f1.append(macro_f1)
+        # assert len(p) == len(s1[stidx:stidx + params.batch_size])
 
         # loss
         clf_loss = dis_net.compute_clf_loss(clf_output, b.label)
         s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
         loss = clf_loss + params.lm_coef * s1_lm_loss
-
         all_costs.append(loss.data.item())
-        words_count += s1_batch.size / params.d_model
-
+        
         # backward
         model_opt.optimizer.zero_grad()
         loss.backward()
@@ -242,24 +251,21 @@ def train_epoch_csu(epoch):
         # optimizer step
         model_opt.step()
 
+        # log and reset 
         if len(all_costs) == params.log_interval:
-            logs.append('{0} ; loss {1} ; sentence/s {2} ; words/s {3} ; perplexity: {4} ; lr: {5} ; embed_norm: {6}'.format(
-                stidx, round(np.mean(all_costs), 2),
-                int(len(all_costs) * params.batch_size / (time.time() - last_time)),
-                int(words_count * 1.0 / (time.time() - last_time)),
-                round(np.exp(np.mean(all_costs)), 2), #acc: round(100. * correct / (stidx + k), 2),
-                model_opt.rate(),
-                dis_net.tgt_embed[0].lut.weight.data.norm()))
-            logger.info(logs[-1])
-            last_time = time.time()
-            words_count = 0
-            all_costs = []
+            logger.info('{0}; loss {1}; em {2}; p {3}; r {4}; f1 {5}; lr: {6} ; '.format(
+                stidx, 
+                round(np.mean(all_costs), 2),
+                round(np.mean(all_em), 2),
+                (round(np.mean(all_micro_p), 2), round(np.mean(all_macro_p), 2)),
+                (round(np.mean(all_micro_r), 2), round(np.mean(all_macro_r), 2)),
+                (round(np.mean(all_micro_f1), 2), round(np.mean(all_macro_f1), 2)),
+                model_opt.rate()))
+            all_costs, all_em, all_micro_p, all_micro_r, all_micro_f1, all_macro_p, all_macro_r, all_macro_f1 = [], [], [], [], [], [], [], []
+
+    # save
     torch.save(dis_net, os.path.join(params.outputdir, params.outputmodelname + "-" + str(epoch) + ".pickle"))
 
-    # train_acc = round(100 * correct / len(s1), 2)
-    # logger.info('results : epoch {0} ; mean accuracy train : {1}'
-                # .format(epoch, train_acc))
-    # return train_acc
 
 def train_epoch(epoch):
     logger.info('\nTRAINING : Epoch ' + str(epoch))
