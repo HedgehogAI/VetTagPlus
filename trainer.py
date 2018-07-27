@@ -267,11 +267,50 @@ def train_epoch_csu(epoch):
     torch.save(dis_net, os.path.join(params.outputdir, params.outputmodelname + "-" + str(epoch) + ".pickle"))
 
 
+def evaluate_epoch_csu(epoch, eval_type='valid'):
+    # initialize
+    if eval_type == 'valid': logger.info('\nVALIDATION : Epoch {0}'.format(epoch))
+    else: logger.info('\nTEST : Epoch {0}'.format(epoch))
+    global dis_net, val_acc_best, lr, stop_training, adam_stop
+    dis_net.eval()
+    
+    # data without shuffle
+    s1 = valid['s1'] if eval_type == 'valid' else test['s1']
+    target = valid['label'] if eval_type == 'valid' else test['label']
+    valid_preds, valid_labels = [], []
+
+    for stidx in range(0, len(s1), params.batch_size):
+        # prepare batch
+        s1_batch = pad_batch(s1[stidx: stidx + params.batch_size], encoder['_pad_'])
+        label_batch = target[stidx:stidx + params.batch_size]
+        b = Batch(s1_batch, label_batch, encoder['_pad_'], gpu_id=params.gpu_id)
+
+        # model forward
+        clf_output = dis_net(b, clf=True, lm=False)
+
+        # evaluation
+        pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)
+        valid_preds.extend(pred.tolist())
+        valid_labels.extend(label_batch.tolist())
+
+    valid_preds, valid_labels = np.array(valid_preds), np.array(valid_labels)
+    em = metrics.accuracy_score(valid_labels, valid_preds)
+    p, r, f1, s = metrics.precision_recall_fscore_support(valid_labels, valid_preds, average=None)
+    micro_p, micro_r, micro_f1 = np.average(p, weights=s), np.average(r, weights=s), np.average(f1, weights=s)
+    macro_p, macro_r, macro_f1 = np.average(p[p.nonzero()]), np.average(r[r.nonzero()]), np.average(f1[f1.nonzero()])
+
+    logger.info('{0}; em {1}; p {2}; r {3}; f1 {4}'.format(
+        epoch, 
+        round(em, 2),
+        (round(micro_p, 2), round(macro_p, 2)),
+        (round(micro_r, 2), round(macro_r, 2)),
+        (round(micro_f1, 2), round(macro_f1, 2))))
+
+
 def train_epoch(epoch):
     logger.info('\nTRAINING : Epoch ' + str(epoch))
     dis_net.train()
     all_costs = []
-    logs = []
     words_count = 0
     last_time = time.time()
     s1 = train['s1']
@@ -301,80 +340,39 @@ def train_epoch(epoch):
         model_opt.step()
 
         if len(all_costs) == params.log_interval:
-            logs.append('{0} ; loss {1} ; sentence/s {2} ; words/s {3} ; perplexity: {4} ; lr: {5} ; embed_norm: {6}'.format(
+            logger.info('{0} ; loss {1} ; sentence/s {2} ; words/s {3} ; perplexity: {4} ; lr: {5} ; embed_norm: {6}'.format(
                 stidx, round(np.mean(all_costs), 2),
                 int(len(all_costs) * params.batch_size / (time.time() - last_time)),
                 int(words_count * 1.0 / (time.time() - last_time)),
                 round(np.exp(np.mean(all_costs)), 2), #acc: round(100. * correct / (stidx + k), 2),
                 model_opt.rate(),
                 dis_net.tgt_embed[0].lut.weight.data.norm()))
-            logger.info(logs[-1])
             last_time = time.time()
             words_count = 0
             all_costs = []
     torch.save(dis_net, os.path.join(params.outputdir, params.outputmodelname + "-" + str(epoch) + ".pickle"))
 
 
-def get_multiclass_recall(preds, y_label):
-    # preds: (label_size), y_label; (label_size)
-    label_cat = range(label_size)
-    labels_accu = {}
-
-    for la in label_cat:
-        # for each label, we get the index of the correct labels
-        idx_of_cat = y_label == la
-        cat_preds = preds[idx_of_cat]
-        if cat_preds.size != 0:
-            accu = np.mean(cat_preds == la)
-            labels_accu[la] = [accu]
-        else:
-            labels_accu[la] = []
-
-    return labels_accu
-
-
-def get_multiclass_prec(preds, y_label):
-    label_cat = range(label_size)
-    labels_accu = {}
-
-    for la in label_cat:
-        # for each label, we get the index of predictions
-        idx_of_cat = preds == la
-        cat_preds = y_label[idx_of_cat]  # ground truth
-        if cat_preds.size != 0:
-            accu = np.mean(cat_preds == la)
-            labels_accu[la] = [accu]
-        else:
-            labels_accu[la] = []
-
-    return labels_accu
-
-def evaluate(epoch, eval_type='valid', final_eval=False, save_confusion=False):
-    global dis_net
-
-    dis_net.eval()
-    all_costs = []
-    # correct = 0.
-    global val_acc_best, lr, stop_training, adam_stop
-
+def evaluate(epoch, eval_type='valid'):
+    global dis_net, val_acc_best, lr, stop_training, adam_stop
     if eval_type == 'valid':
         logger.info('\nVALIDATION : Epoch {0}'.format(epoch))
+    else:
+        logger.info('\nTEST : Epoch {0}'.format(epoch))
+    dis_net.eval()
+    all_costs = []
 
     s1 = valid['s1'] if eval_type == 'valid' else test['s1']
-    # target = valid['label'] if eval_type == 'valid' else test['label']
-    # valid_preds, valid_labels = [], []
 
     for stidx in range(0, s1.shape[1], params.bptt_size):
         # prepare batch
-        # s1_batch = pad_batch(s1[stidx:stidx + params.batch_size], encoder['_pad_'])
-        # label_batch = target[stidx:stidx + params.batch_size]
         pad_start = np.ones([s1.shape[0], 1]) * encoder['_start_']
         pad_end = np.ones([s1.shape[0], 1]) * encoder['_end_']
         s1_batch = np.concatenate([pad_start, s1[:, stidx: stidx + params.bptt_size], pad_end], 1).astype(np.int64)
-        # print 's1_batch_shape', s1_batch.shape
         label_batch = np.ones(s1.shape[0])
         b = Batch(s1_batch, label_batch, encoder['_pad_'], gpu_id=params.gpu_id)
 
+        # model forward
         s1_y_hat = dis_net(b, clf=False, lm=True)
         s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
         loss = s1_lm_loss
@@ -382,92 +380,9 @@ def evaluate(epoch, eval_type='valid', final_eval=False, save_confusion=False):
 
     logger.info(('loss {0} ; perplexity: {1} ; embed_norm: {2}'.format(
                 round(np.mean(all_costs), 2),
-                round(np.exp(np.mean(all_costs)), 2), #acc: round(100. * correct / (stidx + k), 2),
+                round(np.exp(np.mean(all_costs)), 2),
                 dis_net.tgt_embed[0].lut.weight.data.norm())))
-        # model forward
-        # clf_output = dis_net(b, clf=True, lm=False)
 
-        # pred = clf_output.data.max(1)[1]
-        # correct += pred.long().eq(b.label.data.long()).cpu().sum()
-
-        # we collect samples
-        # labels = target[stidx:stidx + params.batch_size]
-        # preds = pred.cpu().numpy()
-
-        # valid_preds.extend(preds.tolist())
-        # valid_labels.extend(labels.tolist())
-
-    # mean_multi_recall = get_multiclass_recall(np.array(valid_preds), np.array(valid_labels))
-    # mean_multi_prec = get_multiclass_prec(np.array(valid_preds), np.array(valid_labels))
-
-    # multiclass_recall_msg = 'Multiclass Recall - '
-    # for k, v in mean_multi_recall.iteritems():
-        # multiclass_recall_msg += dis_labels[k] + ": " + str(v[0]) + " "
-
-    # multiclass_prec_msg = 'Multiclass Precision - '
-    # for k, v in mean_multi_prec.iteritems():
-        # if len(v) == 0:
-            # v = [0.]
-        # multiclass_prec_msg += dis_labels[k] + ": " + str(v[0]) + " "
-
-    # logger.info(multiclass_recall_msg)
-    # logger.info(multiclass_prec_msg)
-
-    # if params.corpus == "gw_cn_5" or params.corpus == "gw_es_5":
-    #     print(multiclass_recall_msg)
-    #     print(multiclass_prec_msg)
-
-    # save model
-    # eval_acc = round(100 * correct / len(s1), 2)
-    # if final_eval:
-        # logger.info('finalgrep : accuracy {0} : {1}'.format(eval_type, eval_acc))
-    # else:
-        # logger.info('togrep : results : epoch {0} ; mean accuracy {1} :\
-              # {2}'.format(epoch, eval_type, eval_acc))
-        # print out multi-class recall and precision
-
-    # if save_confusion:
-        # with open(pjoin(params.outputdir, 'confusion_test.csv'), 'wb') as csvfile:
-            # fieldnames = ['preds', 'labels']
-            # writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            # writer.writeheader()
-
-            # for pair in izip(valid_preds, valid_labels):
-                # writer.writerow({'preds': pair[0], 'labels': pair[1]})
-
-    # there is no re-loading of previous best model btw
-    # if eval_type == 'valid' and epoch <= params.n_epochs:
-    #     if eval_acc > val_acc_best:
-    #         logger.info('saving model at epoch {0}'.format(epoch))
-    #         if not os.path.exists(params.outputdir):
-    #             os.makedirs(params.outputdir)
-    #         torch.save(dis_net, os.path.join(params.outputdir,
-    #                                          params.outputmodelname + ".pickle"))
-    #         # monitor memory usage
-    #         try:
-    #             torch.save(dis_net, os.path.join(params.outputdir,
-    #                                              params.outputmodelname + "-" + str(epoch) + ".pickle"))
-    #         except:
-    #             print("saving by epoch error, maybe due to disk space limit")
-
-    #         val_acc_best = eval_acc
-
-    #         if adam_stop is True:
-    #             # we reset both when there's an improvement
-    #             adam_stop = False
-    #             stop_training = False
-    #     else:
-    #         # early stopping (at 2nd decrease in accuracy)
-    #         stop_training = adam_stop
-    #         adam_stop = True if not params.no_stop else False
-
-    #         # now we finished annealing, we can reload
-    #         if params.reload_val:
-    #             del dis_net
-    #             dis_net = torch.load(os.path.join(params.outputdir, params.outputmodelname + ".pickle"))
-    #             logger.info("Load in previous best epoch")
-
-    # return eval_acc
 
 """
 Train model on Discourse Classification task
@@ -478,18 +393,10 @@ if __name__ == '__main__':
     # del dis_net
     # dis_net = torch.load('/home/yuhuiz/Transformer/exp/sage_lm/dis-model-9.pickle')
     
+    evaluate_epoch_csu(epoch)
+    evaluate_epoch_csu(epoch, eval_type='test')
     while not stop_training and epoch <= params.n_epochs:
         train_epoch_csu(epoch)
-        # evaluate(epoch)
-        # evaluate(epoch, eval_type='test')
-        # train_acc = trainepoch(epoch)
-        # eval_acc = evaluate(epoch, 'valid')
+        evaluate_epoch_csu(epoch)
+        evaluate_epoch_csu(epoch, eval_type='test')
         epoch += 1
-
-    # Run best model on test set.
-    # del dis_net
-    # dis_net = torch.load(os.path.join(params.outputdir, params.outputmodelname + ".pickle"))
-
-    # logger.info('\nTEST : Epoch {0}'.format(epoch))
-    # evaluate(1e6, 'valid', True)
-    # evaluate(0, 'test', True, True)  # save confusion results on test data
