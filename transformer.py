@@ -1,9 +1,3 @@
-"""
-This file is adapted from OpenNMT
-Alexander Rush's blog:
-http://nlp.seas.harvard.edu/2018/04/03/attention.html
-"""
-
 import sys
 import copy
 import torch.nn as nn
@@ -13,21 +7,11 @@ import random
 import time
 import os
 import logging
-
 import torch.nn.functional as F
 from torch.autograd import Variable
-
 from sklearn import metrics
 import numpy as np
-
 from os.path import join as pjoin
-
-"""
-Plans:
-1. Use BPE 40,000 selected for BookCorpus
-2. Use BPE embedding learned by TransformerLM by Tensorflow
-(can also learn our own...build a switch for this!)
-"""
 
 
 def clones(module, N):
@@ -106,12 +90,12 @@ class DecoderLayer(nn.Module):
         self.size = size
         self.self_attn = self_attn
         self.feed_forward = feed_forward
-        self.sublayer = clones(SublayerConnection(size, dropout), 3)
+        self.sublayer = clones(SublayerConnection(size, dropout), 2)
 
     def forward(self, x, tgt_mask):
         "Follow Figure 1 (right) for connections."
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))
-        return self.sublayer[2](x, self.feed_forward)
+        return self.sublayer[1](x, self.feed_forward)
 
 
 class DisSentT(nn.Module):
@@ -136,6 +120,7 @@ class DisSentT(nn.Module):
         self.projection_layer = projection_layer
 
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
+        self.bce_loss = nn.BCEWithLogitsLoss()
 
     def encode(self, tgt, tgt_mask):
         # tgt, tgt_mask need to be on CUDA before being put in here
@@ -188,7 +173,7 @@ class DisSentT(nn.Module):
             return s1_y
 
     def compute_clf_loss(self, logits, labels):
-        return self.ce_loss(logits, labels).mean()
+        return self.bce_loss(logits, labels)
 
     def compute_lm_loss(self, s_h, s_y, s_loss_mask):
         # get the ingredients...compute loss
@@ -196,6 +181,7 @@ class DisSentT(nn.Module):
                                 s_y.view(-1)).view(s_h.size(0), -1)
         seq_loss *= s_loss_mask  # mask sequence loss
         return seq_loss.mean()
+
 
 class LSTMEncoder(nn.Module):
     def __init__(self, config, decoder, tgt_embed, generator):
@@ -227,7 +213,8 @@ class LSTMEncoder(nn.Module):
         seq_loss *= s_loss_mask  # mask sequence loss
         return seq_loss.mean()
 
-def make_model(encoder, config, word_embeddings=None): # , ctx_embeddings=None
+
+def make_model(encoder, config, word_embeddings=None):
     # encoder: dictionary, for vocab
     "Helper: Construct a model from hyperparameters."
     c = copy.deepcopy
@@ -263,6 +250,7 @@ def make_model(encoder, config, word_embeddings=None): # , ctx_embeddings=None
         if p.dim() > 1 and p.requires_grad is True:
             nn.init.xavier_uniform(p)
     return model
+
 
 def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=None
     # encoder: dictionary, for vocab
@@ -376,9 +364,6 @@ class MultiHeadedAttentionProjection(nn.Module):
             mask = mask.view(nbatches, 1, 1, -1)
         nd = self.d_model if self.proj_type == 1 else self.d_k
         # 1) Do all the linear projections in batch from d_model => h x d_k
-        # query, key, value = \
-        #     [l(x).view(nbatches, -1, self.h, nd).transpose(1, 2)
-        #      for l, x in zip(self.linears, (query, key, value))]
         query = self.linear(query).view(nbatches, -1, self.h, nd).transpose(1, 2)
         key = key.repeat(1, 1, self.h).view(nbatches, -1, self.h, nd).transpose(1, 2)
         value = value.repeat(1, 1, self.h).view(nbatches, -1, self.h, nd).transpose(1, 2)

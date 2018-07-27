@@ -1,12 +1,4 @@
-# coding=utf-8
-
-"""
-Adapted from
-https://github.com/facebookresearch/InferSent/blob/master/mutils.py
-https://github.com/openai/finetune-transformer-lm/blob/master/text_utils.py
-https://github.com/openai/finetune-transformer-lm/blob/master/utils.py
-"""
-
+#coding=utf-8
 import os
 import inspect
 from torch import optim
@@ -20,15 +12,12 @@ import numpy as np
 
 
 def get_labels(corpus):
-    if corpus == "csu":
-        labels = ['TODO']
-    elif corpus == "pp":
-        labels = ['TODO']
+    if corpus == "csu" or corpus == "pp":
+        labels = ["Obesity (disorder)", "Hyperproteinemia (disorder)", "Angioedema and/or urticaria (disorder)", "Nutritional deficiency associated condition (disorder)", "Spontaneous hemorrhage (disorder)", "Hereditary disease (disorder)", "Disorder of fetus or newborn (disorder)", "Disorder of labor / delivery (disorder)", "Disorder caused by exposure to ionizing radiation (disorder)", "Disorder of pregnancy (disorder)", "Disorder of pigmentation (disorder)", "Nutritional disorder (disorder)", "Disease caused by Arthropod (disorder)", "Disease caused by parasite (disorder)", "Mental disorder (disorder)", "Vomiting (disorder)", "Poisoning (disorder)", "Disorder of immune function (disorder)", "Anemia (disorder)", "Autoimmune disease (disorder)", "Disorder of hemostatic system (disorder)", "Disorder of cellular component of blood (disorder)", "Congenital disease (disorder)", "Propensity to adverse reactions (disorder)", "Metabolic disease (disorder)", "Disorder of auditory system (disorder)", "Hypersensitivity condition (disorder)", "Disorder of endocrine system (disorder)", "Disorder of hematopoietic cell proliferation (disorder)", "Disorder of nervous system (disorder)", "Disorder of cardiovascular system (disorder)", "Disorder of the genitourinary system (disorder)", "Traumatic AND/OR non-traumatic injury (disorder)", "Visual system disorder (disorder)", "Infectious disease (disorder)", "Disorder of respiratory system (disorder)", "Disorder of connective tissue (disorder)", "Disorder of musculoskeletal system (disorder)", "Disorder of integument (disorder)", "Disorder of digestive system (disorder)", "Neoplasm and/or hamartoma (disorder)", "Clinical finding (finding)"]
     elif corpus == "sage":
-        labels = ['TODO']
+        labels = ['NO_LABEL']
     else:
         raise Exception("corpus not found")
-
     return labels
 
 
@@ -118,32 +107,19 @@ class TextEncoder(object):
         self.cache[token] = word
         return word
 
-    def encode(self, texts, verbose=True, lazy=False, bpe=False):
+    def encode(self, texts, lazy=False, bpe=False):
         # lazy: not using ftfy, SpaCy, or regex. DisSent is processed.
         texts_tokens = []
-        if verbose:
-            for text in tqdm(texts, ncols=80, leave=False):
-                text = self.nlp(text_standardize(ftfy.fix_text(text))) if not lazy else text.split()
-                text_tokens = []
-                for token in text:
-                    token_text = token.text if not lazy else token
-                    if bpe:
-                        text_tokens.extend([self.encoder.get(t, 0) for t in self.bpe(token_text.lower()).split(' ')])
-                    else:
-                        text_tokens.append(self.encoder.get(token_text, self.encoder['_unk_']))
-                texts_tokens.append(text_tokens)
-        else:
-            for text in texts:
-                text = self.nlp(text_standardize(ftfy.fix_text(text))) if not lazy else text.split()
-                text_tokens = []
-                for token in text:
-                    token_text = token.text if not lazy else token
-                    if bpe:
-                        text_tokens.extend([self.encoder.get(t, 0) for t in self.bpe(token_text.lower()).split(' ')])
-                    else:
-                        text_tokens.append(self.encoder.get(token_text, self.encoder['_unk_'])) # no-oov guarantee
-                        assert self.encoder.get(token_text, 0) < len(self.encoder)
-                texts_tokens.append(text_tokens)
+        for text in texts:
+            text = self.nlp(text_standardize(ftfy.fix_text(text))) if not lazy else text.split()
+            text_tokens = []
+            for token in text:
+                token_text = token.text if not lazy else token
+                if bpe:
+                    text_tokens.extend([self.encoder.get(t, self.encoder['_unk_']) for t in self.bpe(token_text.lower()).split(' ')])
+                else:
+                    text_tokens.append(self.encoder.get(token_text, self.encoder['_unk_'])) # no-oov guarantee
+            texts_tokens.append(text_tokens)
         return texts_tokens
 
 

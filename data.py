@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-
-"""
-Data loading code adapted from
-https://github.com/facebookresearch/InferSent/blob/master/data.py
-"""
-
 import os
 import numpy as np
 import torch
@@ -12,6 +5,7 @@ from torch.autograd import Variable
 import logging
 from collections import defaultdict
 from os.path import join as pjoin
+from util import get_labels
 
 
 def embed_batch(batch, word_embeddings, ctx_embeddings, n_embeds=768):
@@ -99,44 +93,32 @@ def get_dis(data_dir, prefix, discourse_tag="csu"):
     # we are not padding anything in here, this is just repeating
     s1 = {}
     target = {}
-
-    if discourse_tag == "csu":
-        dis_map = list_to_map(['TODO'])
-    elif discourse_tag == "pp":
-        dis_map = list_to_map(['TODO'])
-    elif discourse_tag == 'sage':
-        dis_map = list_to_map(['TODO'])
-    else:
-        raise Exception("Corpus/Discourse Tag Set {} not found".format(discourse_tag))
-
+    dis_map = list_to_map(get_labels(discourse_tag))
     logging.info(dis_map)
-    # dis_map: {'and': 0, ...}
 
     for data_type in ['train', 'valid', 'test']:
-        s1[data_type], target[data_type] = {}, {}
-
+        s1[data_type], target[data_type] = [], []
         text_path = pjoin(data_dir, prefix + "_" + data_type + ".tsv")
-
-        s1[data_type]['sent'] = []
-        target[data_type]['data'] = []
-
         with open(text_path, 'r') as f:
             for line in f:
-                columns = line.split('\t')
-                # we use this to avoid/skip lines that are empty
-                # if len(columns[0].split()) > 200: continue # cutdown to max 200 tokens
-                s1[data_type]['sent'].append(columns[0])
-                target[data_type]['data'].append(dis_map['TODO'])
+                columns = line.strip().split('\t')
+                if len(columns[0].split()) > 200: continue #<TODO>:remove
+                s1[data_type].append(columns[0].lower()) # Lower
+                if discourse_tag == 'csu' or discourse_tag == 'pp':
+                    multi_label = np.zeros(len(dis_map), dtype='float32')
+                    if len(columns) == 2:
+                        for number in map(int, columns[1].split()):
+                            multi_label[number] = 1
+                    target[data_type].append(multi_label)
+                else:
+                    target[data_type].append(0) # No label
+        assert len(s1[data_type]) == len(target[data_type])
+        target[data_type] = np.array(target[data_type])
+        logging.info('** {0} DATA : Found {1} pairs of {2} sentences.'.format(
+            data_type.upper(), len(s1[data_type]), data_type))
 
-        assert len(s1[data_type]['sent']) == len(target[data_type]['data'])
-
-        target[data_type]['data'] = np.array(target[data_type]['data'])
-
-        print('** {0} DATA : Found {1} pairs of {2} sentences.'.format(
-            data_type.upper(), len(s1[data_type]['sent']), data_type))
-
-    train = {'s1': s1['train']['sent'], 'label': target['train']['data']}
-    dev = {'s1': s1['valid']['sent'], 'label': target['valid']['data']}
-    test = {'s1': s1['test']['sent'], 'label': target['test']['data']}
+    train = {'s1': s1['train'], 'label': target['train']}
+    dev = {'s1': s1['valid'], 'label': target['valid']}
+    test = {'s1': s1['test'], 'label': target['test']}
     return train, dev, test
 
