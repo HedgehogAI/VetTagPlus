@@ -13,4 +13,6 @@ CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/wiki103_lm_lstm --gpu_i
 
 
 
-CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_test  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_test  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_test_lstm  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm

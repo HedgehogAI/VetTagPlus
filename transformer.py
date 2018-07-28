@@ -184,28 +184,76 @@ class DisSentT(nn.Module):
 
 
 class LSTMEncoder(nn.Module):
-    def __init__(self, config, decoder, tgt_embed, generator):
+    def __init__(self, config, decoder, tgt_embed, generator, projection_layer):
         super(LSTMEncoder, self).__init__()
         self.decoder = decoder
         self.tgt_embed = tgt_embed
         self.generator = generator
         self.config = config
+
+        self.classifier = nn.Sequential(
+            nn.Linear(config['d_model'] * config['proj_head'], config['fc_dim']),
+            nn.Linear(config['fc_dim'], config['fc_dim']),
+            nn.Linear(config['fc_dim'], config['n_classes'])
+        )
+        self.projection_layer = projection_layer
+
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
-    def encode(self, tgt, tgt_mask):
-        # print tgt_mask
-        # print self.tgt_embed(tgt).shape
-        return self.autolen_rnn(self.tgt_embed(tgt))
-    def autolen_rnn(self, inputs):
-        output, (h, c) = self.decoder(inputs)
+        self.bce_loss = nn.BCEWithLogitsLoss()
+    
+    def encode(self, tgt, lengths):
+        return self.autolen_rnn(self.tgt_embed(tgt), lengths)
+    
+    def autolen_rnn(self, inputs, lengths):
+        idx = np.argsort(-lengths)
+        revidx = np.argsort(idx)
+        packed_emb = nn.utils.rnn.pack_padded_sequence(inputs[idx, :, :], lengths[idx], batch_first=True)
+        # self.encoder.flatten_parameters()
+        output, (h, c) = self.decoder(packed_emb)
+        output = nn.utils.rnn.pad_packed_sequence(output, batch_first=True)[0]
+        output = output[revidx, :, :]
         return output
+
+    def pick_h(self, h, lengths):
+        # batch_size, lengths
+        corr_h = []
+        for i, j in enumerate(lengths):
+            corr_h.append(h[i, j-1, :])
+        corr_h = torch.stack(corr_h, dim=0)
+        return corr_h
+
+    def pick_mask(self, mask, lengths):
+        corr_mask = []
+        for i, j in enumerate(lengths):
+            corr_mask.append(mask[i, j-1, :])
+        corr_mask = torch.stack(corr_mask, dim=0)
+        return corr_mask
+    
     def forward(self, batch, clf=True, lm=True):
         "Take in and process masked src and target sequences."
         # this computes LM targets!! before the Generator
-        u_h = self.encode(batch.s1, batch.s1_loss_mask)
-        s1_y = self.generator(u_h)
-        return s1_y
+        u_h = self.encode(batch.s1, batch.s1_lengths)
+        if clf:
+            if self.config['pick_hid']:
+                u = self.pick_h(u_h, batch.s1_lengths)
+            else:
+                u = u_h[:, -1, :]
+            if self.config['proj_head'] != 1:
+                picked_s1_mask = self.pick_mask(batch.s1_mask, batch.s1_lengths)
+                u = self.projection_layer(u, u_h, u_h, picked_s1_mask)
+            clf_output = self.classifier(u)
+        if lm:
+            s1_y = self.generator(u_h)
+        if clf and lm:
+            return clf_output, s1_y
+        elif clf:
+            return clf_output
+        elif lm:
+            return s1_y
+    
     def compute_clf_loss(self, logits, labels):
-        return self.ce_loss(logits, labels).mean()
+        return self.bce_loss(logits, labels).mean()
+    
     def compute_lm_loss(self, s_h, s_y, s_loss_mask):
         # get the ingredients...compute loss
         seq_loss = self.ce_loss(s_h.contiguous().view(-1, self.config['n_words']),
@@ -257,6 +305,7 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
     "Helper: Construct a model from hyperparameters."
     position = PositionalEncoding(config) # ctx_embeddings
     tgt_embed = nn.Sequential(Embeddings(encoder, config, word_embeddings), position)
+    projection = MultiHeadedAttentionProjection(config['proj_head'], config['d_model'], config['proj_type'])
 
     decoder = nn.LSTM(
         config['d_model'], # config.emb_dim
@@ -271,7 +320,8 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
         config,
         decoder,
         tgt_embed,
-        generator
+        generator,
+        projection
     )
 
     # This was important from their code.
