@@ -25,7 +25,7 @@ parser.add_argument("--hypes", type=str, default='hypes/default.json', help="loa
 parser.add_argument("--outputdir", type=str, default='exp/', help="Output directory")
 parser.add_argument("--inputdir", type=str, default='', help="Input model dir")
 parser.add_argument("--outputmodelname", type=str, default='model')
-parser.add_argument("--cut_down_len", type=int, default="400", help="sentence will be cut down if tokens num greater than this")
+parser.add_argument("--cut_down_len", type=int, default="2147483647", help="sentence will be cut down if tokens num greater than this")
 # training
 parser.add_argument("--n_epochs", type=int, default=15)
 parser.add_argument("--cur_epochs", type=int, default=1)
@@ -137,10 +137,10 @@ for split in ['s1']:
             eval(data_type)[split] = batchify(np.array(num_sents[0]), params.batch_size)
         else:
             eval(data_type)[split] = np.array(num_sents)
-print max_len
-print train['s1'].shape
-print valid['s1'].shape
-print test['s1'].shape
+logger.info(max_len)
+logger.info(train['s1'].shape)
+logger.info(valid['s1'].shape)
+logger.info(test['s1'].shape)
 
 """
 Params
@@ -309,12 +309,10 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
         (round(micro_f1, 3), round(macro_f1, 3))))
 
 
-def train_epoch(epoch):
+def train_epoch_sage(epoch):
     logger.info('\nTRAINING : Epoch ' + str(epoch))
     dis_net.train()
     all_costs = []
-    words_count = 0
-    last_time = time.time()
     s1 = train['s1']
 
     for stidx in range(0, s1.shape[1], params.bptt_size):
@@ -331,8 +329,7 @@ def train_epoch(epoch):
         # loss
         s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
         loss = s1_lm_loss
-        all_costs.append(loss.data[0])
-        words_count += s1_batch.size / params.d_model
+        all_costs.append(loss.data.item())
 
         # backward
         model_opt.optimizer.zero_grad()
@@ -342,20 +339,17 @@ def train_epoch(epoch):
         model_opt.step()
 
         if len(all_costs) == params.log_interval:
-            logger.info('{0} ; loss {1} ; sentence/s {2} ; words/s {3} ; perplexity: {4} ; lr: {5} ; embed_norm: {6}'.format(
-                stidx, round(np.mean(all_costs), 2),
-                int(len(all_costs) * params.batch_size / (time.time() - last_time)),
-                int(words_count * 1.0 / (time.time() - last_time)),
-                round(np.exp(np.mean(all_costs)), 2), #acc: round(100. * correct / (stidx + k), 2),
+            logger.info('{0} ; loss {1} ; perplexity: {2} ; lr: {3} ; embed_norm: {4}'.format(
+                stidx, 
+                round(np.mean(all_costs), 2),
+                round(np.exp(np.mean(all_costs)), 2),
                 model_opt.rate(),
                 dis_net.tgt_embed[0].lut.weight.data.norm()))
-            last_time = time.time()
-            words_count = 0
             all_costs = []
     torch.save(dis_net, os.path.join(params.outputdir, params.outputmodelname + "-" + str(epoch) + ".pickle"))
 
 
-def evaluate(epoch, eval_type='valid'):
+def evaluate_epoch_sage(epoch, eval_type='valid'):
     global dis_net, val_acc_best, lr, stop_training, adam_stop
     if eval_type == 'valid':
         logger.info('\nVALIDATION : Epoch {0}'.format(epoch))
@@ -378,7 +372,7 @@ def evaluate(epoch, eval_type='valid'):
         s1_y_hat = dis_net(b, clf=False, lm=True)
         s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
         loss = s1_lm_loss
-        all_costs.append(loss.data[0])
+        all_costs.append(loss.data.item())
 
     logger.info(('loss {0} ; perplexity: {1} ; embed_norm: {2}'.format(
                 round(np.mean(all_costs), 2),
@@ -404,3 +398,10 @@ if __name__ == '__main__':
             evaluate_epoch_csu(epoch)
             evaluate_epoch_csu(epoch, eval_type='test')
             epoch += 1
+    elif params.corpus == 'sage':
+        while not stop_training and epoch <= params.n_epochs:
+            train_epoch_sage(epoch)
+            evaluate_epoch_sage(epoch)
+            evaluate_epoch_sage(epoch, eval_type='test')
+            epoch += 1
+
