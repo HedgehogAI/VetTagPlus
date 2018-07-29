@@ -17,6 +17,11 @@ CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_test  --no_stop --t
 
 CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_test_lstm  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm
 
-CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu_test_lstm_no_constrain  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm ## not work
+
+#0728
 
 CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp_test  --no_stop --train_emb --tied --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --model_type transformer
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_transformer_cut600 --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_bs4 --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 4 --proj_head 4 --model_type transformer --cut_down_len 600

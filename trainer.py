@@ -24,6 +24,7 @@ parser.add_argument("--corpus", type=str, default='sage', help="sage|csu|pp")
 parser.add_argument("--hypes", type=str, default='hypes/default.json', help="load in a hyperparameter file")
 parser.add_argument("--outputdir", type=str, default='exp/', help="Output directory")
 parser.add_argument("--outputmodelname", type=str, default='model')
+parser.add_argument("--cut_down_len", type=int, default="400", help="sentence will be cut down if tokens num greater than this")
 # training
 parser.add_argument("--n_epochs", type=int, default=15)
 parser.add_argument("--cur_epochs", type=int, default=1)
@@ -114,7 +115,7 @@ encoder['_unk_'] = len(encoder)
 """
 DATA
 """
-train, valid, test = get_dis(data_dir, prefix, params.corpus)  # this stays the same
+train, valid, test = get_dis(data_dir, prefix, params.corpus, params.cut_down_len)  # this stays the same
 # If this is slow...we can speed it up
 # Numericalization; No padding here
 # Also, Batch class from OpenNMT will take care of target generation

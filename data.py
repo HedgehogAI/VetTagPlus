@@ -89,7 +89,7 @@ def list_to_map(dis_label):
     return dis_map
 
 
-def get_dis(data_dir, prefix, discourse_tag="csu"):
+def get_dis(data_dir, prefix, discourse_tag, cut_down_len):
     # we are not padding anything in here, this is just repeating
     s1 = {}
     target = {}
@@ -103,7 +103,7 @@ def get_dis(data_dir, prefix, discourse_tag="csu"):
         with open(text_path, 'r') as f:
             for line in f:
                 columns = line.strip().split('\t')
-                if len(columns[0].split()) > 200: continue #<TODO>:remove
+                if len(columns[0].split()) > cut_down_len: columns[0] = ' '.join([token for token in columns[0].split()[:cut_down_len]]) #<TODO>:remove
                 s1[data_type].append(columns[0].lower()) # Lower
                 if discourse_tag == 'csu' or discourse_tag == 'pp':
                     multi_label = np.zeros(len(dis_map), dtype='float32')
