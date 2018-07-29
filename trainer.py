@@ -390,13 +390,15 @@ Train model on Discourse Classification task
 if __name__ == '__main__':
     epoch = params.cur_epochs  # start at 1
 
-    # del dis_net
-    # dis_net = torch.load('/home/yuhuiz/Transformer/exp/sage_lm/dis-model-9.pickle')
-    
-    evaluate_epoch_csu(epoch)
-    evaluate_epoch_csu(epoch, eval_type='test')
-    while not stop_training and epoch <= params.n_epochs:
-        train_epoch_csu(epoch)
+    if params.corpus == 'pp':
+        del dis_net
+        dis_net = torch.load('/home/yuhuiz/Transformer/exp/csu_test_lstm/model-15.pickle')
+        evaluate_epoch_csu(epoch, eval_type='test')
+    elif params.corpus == 'csu':
         evaluate_epoch_csu(epoch)
         evaluate_epoch_csu(epoch, eval_type='test')
-        epoch += 1
+        while not stop_training and epoch <= params.n_epochs:
+            train_epoch_csu(epoch)
+            evaluate_epoch_csu(epoch)
+            evaluate_epoch_csu(epoch, eval_type='test')
+            epoch += 1

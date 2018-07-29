@@ -99,6 +99,7 @@ def get_dis(data_dir, prefix, discourse_tag="csu"):
     for data_type in ['train', 'valid', 'test']:
         s1[data_type], target[data_type] = [], []
         text_path = pjoin(data_dir, prefix + "_" + data_type + ".tsv")
+        if not os.path.exists(text_path): continue
         with open(text_path, 'r') as f:
             for line in f:
                 columns = line.strip().split('\t')

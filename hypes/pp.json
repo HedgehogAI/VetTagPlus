@@ -2,5 +2,5 @@
   "data_dir": "/home/yuhuiz/ClinicalData/src/csu/data/csu/",
   "bpe_encoder_path": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/encoder_bpe_50000.json",
   "bpe_vocab_path": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/vocab_50000.bpe",
-  "csu": "snomed_multi_label_no_des"
+  "pp": "adobe_abbr_matched_snomed_multi_label_no_des"
 }
