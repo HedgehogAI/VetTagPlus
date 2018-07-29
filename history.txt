@@ -15,13 +15,22 @@ CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/wiki103_lm_lstm --gpu_i
 
 CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_test  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4
 
-CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_test_lstm  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm
-
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp_test  --no_stop --train_emb --tied --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --model_type transformer
 
 #0728
 
-CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp_test  --no_stop --train_emb --tied --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --model_type transformer
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu_lstm_cut600  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 
 
 CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_transformer_cut600 --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 
 
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_bs4 --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 4 --proj_head 4 --model_type transformer --cut_down_len 600
+
+#0729
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/pp_test  --no_stop --train_emb --tied --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --model_type transformer --inputdir exp/csu_transformer_cut600/model-8.pickle --cut_down_len 600
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/pp_test  --no_stop --train_emb --tied --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --model_type transformer --inputdir exp/csu_lstm_cut600/model-15.pickle --cut_down_len 600
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_test  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type transformer --inputdir exp/csu_transformer_cut600/model-8.pickle --cut_down_len 600
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_test  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type transformer --inputdir exp/csu_lstm_cut600/model-15.pickle --cut_down_len 600

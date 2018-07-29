@@ -23,6 +23,7 @@ parser = argparse.ArgumentParser(description='Clinical Dataset')
 parser.add_argument("--corpus", type=str, default='sage', help="sage|csu|pp")
 parser.add_argument("--hypes", type=str, default='hypes/default.json', help="load in a hyperparameter file")
 parser.add_argument("--outputdir", type=str, default='exp/', help="Output directory")
+parser.add_argument("--inputdir", type=str, default='', help="Input model dir")
 parser.add_argument("--outputmodelname", type=str, default='model')
 parser.add_argument("--cut_down_len", type=int, default="400", help="sentence will be cut down if tokens num greater than this")
 # training
@@ -257,10 +258,10 @@ def train_epoch_csu(epoch):
             logger.info('{0}; loss {1}; em {2}; p {3}; r {4}; f1 {5}; lr: {6} ; '.format(
                 stidx, 
                 round(np.mean(all_costs), 2),
-                round(np.mean(all_em), 2),
-                (round(np.mean(all_micro_p), 2), round(np.mean(all_macro_p), 2)),
-                (round(np.mean(all_micro_r), 2), round(np.mean(all_macro_r), 2)),
-                (round(np.mean(all_micro_f1), 2), round(np.mean(all_macro_f1), 2)),
+                round(np.mean(all_em), 3),
+                (round(np.mean(all_micro_p), 3), round(np.mean(all_macro_p), 3)),
+                (round(np.mean(all_micro_r), 3), round(np.mean(all_macro_r), 3)),
+                (round(np.mean(all_micro_f1), 3), round(np.mean(all_macro_f1), 3)),
                 model_opt.rate()))
             all_costs, all_em, all_micro_p, all_micro_r, all_micro_f1, all_macro_p, all_macro_r, all_macro_f1 = [], [], [], [], [], [], [], []
 
@@ -302,10 +303,10 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
 
     logger.info('{0}; em {1}; p {2}; r {3}; f1 {4}'.format(
         epoch, 
-        round(em, 2),
-        (round(micro_p, 2), round(macro_p, 2)),
-        (round(micro_r, 2), round(macro_r, 2)),
-        (round(micro_f1, 2), round(macro_f1, 2))))
+        round(em, 3),
+        (round(micro_p, 3), round(macro_p, 3)),
+        (round(micro_r, 3), round(macro_r, 3)),
+        (round(micro_f1, 3), round(macro_f1, 3))))
 
 
 def train_epoch(epoch):
@@ -393,7 +394,7 @@ if __name__ == '__main__':
 
     if params.corpus == 'pp':
         del dis_net
-        dis_net = torch.load('/home/yuhuiz/Transformer/exp/csu_test_lstm/model-15.pickle')
+        dis_net = torch.load(params.inputdir)
         evaluate_epoch_csu(epoch, eval_type='test')
     elif params.corpus == 'csu':
         evaluate_epoch_csu(epoch)
