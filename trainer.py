@@ -146,7 +146,7 @@ logger.info(test['s1'].shape)
 Params
 """
 word_embeddings = (np.random.randn(len(encoder), params.d_model) * 0.02).astype(np.float32)
-dis_labels = get_labels(params.corpus)
+dis_labels = get_labels('csu')
 label_size = len(dis_labels)
 
 """
@@ -391,6 +391,16 @@ if __name__ == '__main__':
         dis_net = torch.load(params.inputdir)
         evaluate_epoch_csu(epoch, eval_type='test')
     elif params.corpus == 'csu':
+        if len(params.inputdir) != 0:
+            logger.info('Load Model from %s' % (params.inputdir))
+            del dis_net
+            dis_net = torch.load(params.inputdir)
+            del dis_net.classifier
+            dis_net.classifier = nn.Sequential(
+                nn.Linear(config_dis_model['d_model'] * config_dis_model['proj_head'], config_dis_model['fc_dim']),
+                nn.Linear(config_dis_model['fc_dim'], config_dis_model['fc_dim']),
+                nn.Linear(config_dis_model['fc_dim'], config_dis_model['n_classes'])
+            ).cuda()
         evaluate_epoch_csu(epoch)
         evaluate_epoch_csu(epoch, eval_type='test')
         while not stop_training and epoch <= params.n_epochs:
