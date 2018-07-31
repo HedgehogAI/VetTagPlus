@@ -41,9 +41,9 @@ parser.add_argument("--l2", type=float, default=0.01, help="on non-bias non-gain
 parser.add_argument("--max_norm", type=float, default=2., help="max norm (grad clipping). Original paper uses 1.")
 parser.add_argument("--log_interval", type=int, default=100, help="how many batches to log once")
 parser.add_argument('--lm_coef', type=float, default=0.5)
-parser.add_argument("--train_emb", action='store_true', help="Initialize embedding randomly, and then learn it, default to False")
-parser.add_argument("--pick_hid", action='store_true', help="Pick correct hidden states")
-parser.add_argument("--tied", action='store_true', help="Tie weights to embedding, should be always flagged True")
+parser.add_argument("--train_emb", default=True, action='store_true', help="Initialize embedding randomly, and then learn it, default to False")
+parser.add_argument("--pick_hid", default=True, action='store_true', help="Pick correct hidden states")
+parser.add_argument("--tied", default=True, action='store_true', help="Tie weights to embedding, should be always flagged True")
 parser.add_argument("--proj_head", type=int, default=1, help="last docoder layer head number")
 parser.add_argument("--proj_type", type=int, default=1, help="last decoder layer blow up type, 1 for initial linear transformation, 2 for final linear transformation")
 parser.add_argument("--model_type", type=str, default="transformer", help="transformer|lstm")
@@ -56,7 +56,7 @@ parser.add_argument("--n_layers", type=int, default=6, help="decoder num layers"
 parser.add_argument("--fc_dim", type=int, default=512, help="nhid of fc layers")
 # parser.add_argument("--pool_type", type=str, default='max', help="flag if we do max pooling, which hasn't been done before")
 parser.add_argument("--reload_val", action='store_true', help="Reload the previous best epoch on validation, should be used with tied weights")
-parser.add_argument("--no_stop", action='store_true', help="no early stopping")
+parser.add_argument("--no_stop", default=True, action='store_true', help="no early stopping")
 # gpu
 parser.add_argument("--gpu_id", type=int, default=0, help="GPU ID")
 parser.add_argument("--seed", type=int, default=1234, help="seed")
@@ -393,16 +393,9 @@ if __name__ == '__main__':
     elif params.corpus == 'csu':
         if len(params.inputdir) != 0:
             logger.info('Load Model from %s' % (params.inputdir))
-            del dis_net
-            dis_net = torch.load(params.inputdir)
-            del dis_net.classifier
-            dis_net.classifier = nn.Sequential(
-                nn.Linear(config_dis_model['d_model'] * config_dis_model['proj_head'], config_dis_model['fc_dim']),
-                nn.Linear(config_dis_model['fc_dim'], config_dis_model['fc_dim']),
-                nn.Linear(config_dis_model['fc_dim'], config_dis_model['n_classes'])
-            ).cuda()
-        evaluate_epoch_csu(epoch)
-        evaluate_epoch_csu(epoch, eval_type='test')
+            dis_net.load_state_dict(torch.load(params.inputdir).state_dict())
+        # evaluate_epoch_csu(epoch)
+        # evaluate_epoch_csu(epoch, eval_type='test')
         while not stop_training and epoch <= params.n_epochs:
             train_epoch_csu(epoch)
             evaluate_epoch_csu(epoch)

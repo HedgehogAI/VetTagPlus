@@ -46,4 +46,10 @@ CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_
 
 #0730
 
-CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/pp_test  --no_stop --train_emb --tied --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --model_type transformer --inputdir exp/csu_transformer_cut600_bpe/model-8.pickle --cut_down_len 600
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_transformer_cut600_bpe  --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_lstm_cut600_bpe --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/sage_lm_bpe --corpus sage --hypes hypes/sage.json --batch_size 6 --bptt_size 600 --proj_head 4 --model_type transformer
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu_transformer_cut600_bpe_pretrain_lm  --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --inputdir exp/sage_lm_bpe/model-2.pickle
