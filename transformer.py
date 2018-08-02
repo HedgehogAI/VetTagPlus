@@ -313,9 +313,14 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
         1,
         batch_first=True
     )
-
-    generator = Generator(config['d_model'], len(encoder), word_embedding_weight=tgt_embed[0].lut.weight)
-
+    if config['tied']:
+        if config['train_emb']:
+            generator = Generator(config['d_model'], len(encoder), word_embedding_weight=tgt_embed[0].lut.weight)
+        else:
+            generator = Generator(config['d_model'], len(encoder), np_word_embedding=word_embeddings)
+    else:
+        generator = Generator(config['d_model'], len(encoder))
+        
     model = LSTMEncoder(
         config,
         decoder,
@@ -323,13 +328,15 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
         generator,
         projection
     )
-
+    logging.info(model.tgt_embed[0].lut.weight.data.norm())
     # This was important from their code.
     # Initialize parameters with Glorot / fan_avg.
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
+        if p.shape[0] == 50004: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
         if p.dim() > 1 and p.requires_grad is True:
             nn.init.xavier_uniform(p)
+    logging.info(model.tgt_embed[0].lut.weight.data.norm())
     return model
 
 
@@ -449,10 +456,12 @@ class Embeddings(nn.Module):
         super(Embeddings, self).__init__()
         self.lut = nn.Embedding(len(encoder), config['d_model'])
         self.d_model = config['d_model']
-
-        if not config['train_emb']:
+        if config['init_emb']:
             assert word_embeddings is not None
+            logging.info('copy embeddings...')
+            logging.info('2-norm %f' % (np.linalg.norm(word_embeddings)))
             self.lut.weight.data.copy_(torch.from_numpy(word_embeddings))
+        if not config['train_emb']:
             self.lut.weight.requires_grad = False
 
     def forward(self, x):

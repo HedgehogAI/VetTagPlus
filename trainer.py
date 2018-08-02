@@ -41,7 +41,8 @@ parser.add_argument("--l2", type=float, default=0.01, help="on non-bias non-gain
 parser.add_argument("--max_norm", type=float, default=2., help="max norm (grad clipping). Original paper uses 1.")
 parser.add_argument("--log_interval", type=int, default=100, help="how many batches to log once")
 parser.add_argument('--lm_coef', type=float, default=0.5)
-parser.add_argument("--train_emb", default=True, action='store_true', help="Initialize embedding randomly, and then learn it, default to False")
+parser.add_argument("--train_emb", default=False, action='store_true', help="Allow to learn embedding, default to False")
+parser.add_argument("--init_emb", default=False, action='store_true', help="Initialize embedding randomly, default to False")
 parser.add_argument("--pick_hid", default=True, action='store_true', help="Pick correct hidden states")
 parser.add_argument("--tied", default=True, action='store_true', help="Tie weights to embedding, should be always flagged True")
 parser.add_argument("--proj_head", type=int, default=1, help="last docoder layer head number")
@@ -101,6 +102,7 @@ data_dir = json_config['data_dir']
 prefix = json_config[params.corpus]
 bpe_encoder_path = json_config['bpe_encoder_path']
 bpe_vocab_path = json_config['bpe_vocab_path']
+if params.init_emb: wordvec_path = json_config['wordvec_path']
 
 """
 BPE encoder
@@ -112,6 +114,7 @@ encoder['_pad_'] = len(encoder)
 encoder['_start_'] = len(encoder)
 encoder['_end_'] = len(encoder)
 encoder['_unk_'] = len(encoder)
+n_special = 4
 
 """
 DATA
@@ -145,7 +148,12 @@ logger.info(test['s1'].shape)
 """
 Params
 """
-word_embeddings = (np.random.randn(len(encoder), params.d_model) * 0.02).astype(np.float32)
+if params.init_emb:
+    word_embeddings = np.concatenate([np.load(wordvec_path).astype(np.float32),
+                                      np.zeros((1, params.d_model), np.float32), # pad, zero-value!
+                                      (np.random.randn(n_special - 1, params.d_model) * 0.02).astype(np.float32)], 0)
+else:                                                          
+    word_embeddings = (np.random.randn(len(encoder), params.d_model) * 0.02).astype(np.float32)
 dis_labels = get_labels('csu')
 label_size = len(dis_labels)
 
@@ -166,6 +174,7 @@ config_dis_model = {
     'n_heads': params.n_heads,
     'gpu_id': params.gpu_id,
     'train_emb': params.train_emb,
+    'init_emb': params.init_emb,
     'pick_hid': params.pick_hid,
     'tied': params.tied,
     'proj_head': params.proj_head,
@@ -229,8 +238,11 @@ def train_epoch_csu(epoch):
         pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)
         em = metrics.accuracy_score(label_batch, pred)
         p, r, f1, s = metrics.precision_recall_fscore_support(label_batch, pred, average=None)
-        micro_p, micro_r, micro_f1 = np.average(p, weights=s), np.average(r, weights=s), np.average(f1, weights=s)
-        macro_p, macro_r, macro_f1 = np.average(p[p.nonzero()]), np.average(r[r.nonzero()]), np.average(f1[f1.nonzero()])
+        try:
+            micro_p, micro_r, micro_f1 = np.average(p, weights=s), np.average(r, weights=s), np.average(f1, weights=s)
+            macro_p, macro_r, macro_f1 = np.average(p[p.nonzero()]), np.average(r[r.nonzero()]), np.average(f1[f1.nonzero()])
+        except:
+            continue
         all_em.append(em)
         all_micro_p.append(micro_p)
         all_micro_r.append(micro_r)
@@ -255,14 +267,15 @@ def train_epoch_csu(epoch):
 
         # log and reset 
         if len(all_costs) == params.log_interval:
-            logger.info('{0}; loss {1}; em {2}; p {3}; r {4}; f1 {5}; lr: {6} ; '.format(
+            logger.info('{0}; loss {1}; em {2}; p {3}; r {4}; f1 {5}; lr: {6}; embed_norm: {7}'.format(
                 stidx, 
                 round(np.mean(all_costs), 2),
                 round(np.mean(all_em), 3),
                 (round(np.mean(all_micro_p), 3), round(np.mean(all_macro_p), 3)),
                 (round(np.mean(all_micro_r), 3), round(np.mean(all_macro_r), 3)),
                 (round(np.mean(all_micro_f1), 3), round(np.mean(all_macro_f1), 3)),
-                model_opt.rate()))
+                model_opt.rate(),
+                dis_net.tgt_embed[0].lut.weight.data.norm()))
             all_costs, all_em, all_micro_p, all_micro_r, all_micro_f1, all_macro_p, all_macro_r, all_macro_f1 = [], [], [], [], [], [], [], []
 
     # save
