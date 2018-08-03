@@ -333,7 +333,7 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
     # Initialize parameters with Glorot / fan_avg.
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
-        if p.shape[0] == 50004: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
+        # if p.shape[0] == 50004: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
         if p.dim() > 1 and p.requires_grad is True:
             nn.init.xavier_uniform(p)
     logging.info(model.tgt_embed[0].lut.weight.data.norm())

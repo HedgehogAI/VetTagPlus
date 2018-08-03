@@ -61,3 +61,7 @@ CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/pp_test --corpus pp --h
 CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_lstm_lockembed --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --init_emb --lm_coef 0.0
 
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_lstm_unlockembed --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --init_emb --train_emb --lm_coef 0.0
+
+# 0802
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_lstm_no_lm --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0
