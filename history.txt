@@ -65,3 +65,11 @@ CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_lstm_unlockembed --
 # 0802
 
 CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_lstm_no_lm --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0
+
+# 0803
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/sage_lm_lstm_bpe --corpus sage --hypes hypes/sage.json --batch_size 10 --bptt_size 600 --proj_head 4 --model_type lstm --train_emb
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_lstm_cut600 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_transformer_cut600 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb

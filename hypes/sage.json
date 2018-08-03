@@ -1,6 +1,6 @@
 {
-  "data_dir": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/sage/",
-  "bpe_encoder_path": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/encoder_bpe_50000.json",
-  "bpe_vocab_path": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/vocab_50000.bpe",
+  "data_dir": "/home/yuhuiz/Transformer/data/sage/sage/",
+  "bpe_encoder_path": "/home/yuhuiz/Transformer/data/sage/encoder_bpe_50000.json",
+  "bpe_vocab_path": "/home/yuhuiz/Transformer/data/sage/vocab_50000.bpe",
   "sage": "sage_ascii_oneline_bpe"
 }
