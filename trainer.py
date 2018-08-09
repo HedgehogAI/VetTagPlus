@@ -27,7 +27,7 @@ parser.add_argument("--inputdir", type=str, default='', help="Input model dir")
 parser.add_argument("--outputmodelname", type=str, default='model')
 parser.add_argument("--cut_down_len", type=int, default="2147483647", help="sentence will be cut down if tokens num greater than this")
 # training
-parser.add_argument("--n_epochs", type=int, default=15)
+parser.add_argument("--n_epochs", type=int, default=10)
 parser.add_argument("--cur_epochs", type=int, default=1)
 parser.add_argument("--cur_valid", type=float, default=-1e10, help="must set this otherwise resumed model will be saved by default")
 parser.add_argument("--bptt_size", type=int, default=50)
@@ -48,6 +48,10 @@ parser.add_argument("--tied", default=True, action='store_true', help="Tie weigh
 parser.add_argument("--proj_head", type=int, default=1, help="last docoder layer head number")
 parser.add_argument("--proj_type", type=int, default=1, help="last decoder layer blow up type, 1 for initial linear transformation, 2 for final linear transformation")
 parser.add_argument("--model_type", type=str, default="transformer", help="transformer|lstm")
+parser.add_argument("--meta_param", type=float, default=0.0, help="meta param")
+parser.add_argument("--cluster_param_a", type=float, default=0.0, help="cluster param a")
+parser.add_argument("--cluster_param_b", type=float, default=0.0, help="cluster param b")
+parser.add_argument("--cluster_param_c", type=float, default=0.0, help="cluster param c")
 # for now we fix non-linearity to whatever PyTorch provides...could be SELU
 # model
 parser.add_argument("--d_ff", type=int, default=2048, help="decoder nhid dimension")
@@ -178,7 +182,9 @@ config_dis_model = {
     'pick_hid': params.pick_hid,
     'tied': params.tied,
     'proj_head': params.proj_head,
-    'proj_type': params.proj_type
+    'proj_type': params.proj_type,
+    'meta_param': params.meta_param,
+    'cluster_param': [params.cluster_param_a, params.cluster_param_b, params.cluster_param_c]
 }
 if params.cur_epochs == 1:
     if params.model_type == "lstm":

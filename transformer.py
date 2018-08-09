@@ -6,6 +6,8 @@ import math
 import random
 import time
 import os
+import json
+from collections import defaultdict
 import logging
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -121,6 +123,8 @@ class DisSentT(nn.Module):
 
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
         self.bce_loss = nn.BCEWithLogitsLoss()
+        self.meta_loss = MetaLoss(config)
+        self.cluster_loss = ClusterLoss(config)
 
     def encode(self, tgt, tgt_mask):
         # tgt, tgt_mask need to be on CUDA before being put in here
@@ -173,7 +177,12 @@ class DisSentT(nn.Module):
             return s1_y
 
     def compute_clf_loss(self, logits, labels):
-        return self.bce_loss(logits, labels)
+        loss = self.bce_loss(logits, labels)
+        if self.config['meta_param'] != 0.0:
+            loss += self.meta_loss(logits, labels)
+        if self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
+            loss += self.cluster_loss(self.classifier[-1].weight, len(labels)) # <TODO> softmax weight?
+        return loss
 
     def compute_lm_loss(self, s_h, s_y, s_loss_mask):
         # get the ingredients...compute loss
@@ -296,6 +305,7 @@ def make_model(encoder, config, word_embeddings=None):
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
         if p.dim() > 1 and p.requires_grad is True:
+            # if p.shape[0] == 50004: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
             nn.init.xavier_uniform(p)
     return model
 
@@ -521,4 +531,89 @@ class NoamOpt:
         return self.factor * \
                (self.model_size ** (-0.5) *
                 min(step ** (-0.5), step * self.warmup ** (-1.5)))
+
+
+class MetaLoss(nn.Module):
+    def __init__(self, config, cluster_path='./data/csu/snomed_label_to_meta_grouping.json',
+                 label_to_meta_map_path='./data/csu/snomed_label_to_meta_map.json'):
+        super(MetaLoss, self).__init__()
+
+        with open(cluster_path, 'rb') as f:
+            self.label_grouping = json.load(f)
+
+        with open(label_to_meta_map_path, 'rb') as f:
+            self.meta_label_mapping = json.load(f)
+
+        self.meta_label_size = len(self.label_grouping)
+        self.config = config
+
+        # your original classifier did this wrong...found a bug
+        self.bce_loss = nn.BCELoss()  # this takes in probability (after sigmoid)
+
+    # now that this becomes somewhat independent...maybe you can examine this more closely?
+    def generate_meta_y(self, indices, meta_label_size, batch_size):
+        a = np.array([[0.] * meta_label_size for _ in range(batch_size)], dtype=np.float32)
+        matched = defaultdict(set)
+        for b, l in indices:
+            if b not in matched:
+                a[b, self.meta_label_mapping[str(l)]] = 1.
+                matched[b].add(self.meta_label_mapping[str(l)])
+            elif self.meta_label_mapping[str(l)] not in matched[b]:
+                a[b, self.meta_label_mapping[str(l)]] = 1.
+                matched[b].add(self.meta_label_mapping[str(l)])
+        assert np.sum(a <= 1) == a.size
+        return a
+
+    def forward(self, logits, true_y):
+        batch_size = logits.size(0)
+        y_hat = torch.sigmoid(logits)
+        meta_probs = []
+        for i in range(self.meta_label_size):
+            # 1 - (1 - p_1)(...)(1 - p_n)
+            meta_prob = (1 - y_hat[:, self.label_grouping[str(i)]]).prod(1)
+            meta_probs.append(meta_prob)  # in this version we don't do threshold....(originally we did)
+
+        meta_probs = torch.stack(meta_probs, dim=1)
+        assert meta_probs.size(1) == self.meta_label_size
+
+        # generate meta-label
+        y_indices = true_y.nonzero()
+        meta_y = self.generate_meta_y(y_indices.data.cpu().numpy().tolist(), self.meta_label_size,
+                                      batch_size)
+        meta_y = Variable(torch.from_numpy(meta_y)).cuda()
+
+        meta_loss = self.bce_loss(meta_probs, meta_y) * self.config['meta_param']
+        return meta_loss
+
+
+# compute loss
+class ClusterLoss(nn.Module):
+    def __init__(self, config, cluster_path='./data/csu/snomed_label_to_meta_grouping.json'):
+        super(ClusterLoss, self).__init__()
+
+        with open(cluster_path, 'rb') as f:
+            label_grouping = json.load(f)
+
+        self.meta_category_groups = label_grouping.values()
+        self.config = config
+
+    def forward(self, softmax_weight, batch_size):
+        w_bar = softmax_weight.sum(1) / self.config['n_classes']  # w_bar
+
+        omega_mean = softmax_weight.pow(2).sum()
+        omega_between = 0.
+        omega_within = 0.
+
+        for c in xrange(len(self.meta_category_groups)):
+            m_c = len(self.meta_category_groups[c])
+            w_c_bar = softmax_weight[:, self.meta_category_groups[c]].sum(1) / m_c
+            omega_between += m_c * (w_c_bar - w_bar).pow(2).sum()
+            for i in self.meta_category_groups[c]:
+                # this value will be 0 for singleton group
+                omega_within += (softmax_weight[:, i] - w_c_bar).pow(2).sum()
+
+        aux_loss = omega_mean * self.config['cluster_param'][0] + (omega_between * self.config['cluster_param'][1] +
+                                                       omega_within * self.config['cluster_param'][2]) / batch_size
+
+        return aux_loss
             

@@ -73,3 +73,55 @@ CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/sage_lm_lstm_bpe --corp
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_lstm_cut600 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb
 
 CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_transformer_cut600 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu_transformer_cut600_bpe_no_lmloss --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --lm_coef 0.0
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_lstm_cut600_bpe_pretrainlm10 --train_emb --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --inputdir exp/sage_lm_lstm_bpe/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_lstm_cut600_bpe_no_lmloss --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_lstm_cut600_bpe_pretrainedlm10_no_lmloss --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0 --inputdir exp/sage_lm_lstm_bpe/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu_transformer_cut600_bpe_pretrain_lm8_no_lmloss --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --lm_coef 0.0 --inputdir exp/sage_lm_bpe/model-8.pickle 
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/sage_lm_lstm --corpus sage --hypes hypes/sage_word2vec.json --batch_size 10 --bptt_size 600 --proj_head 4 --model_type lstm --train_emb
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/sage_lm --corpus sage --hypes hypes/sage_word2vec.json --batch_size 5 --bptt_size 600 --proj_head 4 --model_type transformer --train_emb
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_lstm_cut600_pretrainedlm10 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --inputdir exp/sage_lm_lstm/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_lstm_cut600_pretrainedlm10_no_lmloss --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --inputdir exp/sage_lm_lstm/model-10.pickle --lm_coef 0.0 
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --inputdir exp/sage_lm/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10_no_lmloss --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --inputdir exp/sage_lm/model-10.pickle --lm_coef 0.0 
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_transformer_cut600_no_lmloss --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --lm_coef 0.0 
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_transformer_cut600_no_lmloss --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --lm_coef 0.0 
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu_lstm_cut600_no_lmloss --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0
+
+# 0805
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp_test --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/bpe/csu_lstm_cut600_bpe_pretrainlm10/model-[x].pickle
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp_test --corpus pp --hypes hypes/pp_word2vec.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/csu_transformer_cut600_pretrainedlm10_no_lmloss/model-6.pickle
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_lstm_lockembed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --init_emb --lm_coef 0.0
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_lstm_unlockembed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --init_emb --train_emb --lm_coef 0.0
+
+
+# 0807
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_transformer_lockembed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --init_emb --lm_coef 0.0
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_unlockembed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --init_emb --train_emb --lm_coef 0.0
+
+# 0808
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_transformer_cut600_metaloss_1e-4 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --meta_param 0.0001
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_metaloss_1e-3 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --meta_param 0.001
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/test --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cluster_param_a 1e-5 --cluster_param_b 1e-4 --cluster_param_c 1e-4
