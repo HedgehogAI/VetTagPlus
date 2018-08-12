@@ -120,6 +120,9 @@ class DisSentT(nn.Module):
         )
 
         self.projection_layer = projection_layer
+        
+        if config['metamap']:
+            self.metamap_layer = nn.Linear(config['n_metamap'], config['n_classes'])
 
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
         self.bce_loss = nn.BCEWithLogitsLoss()
@@ -145,8 +148,9 @@ class DisSentT(nn.Module):
         corr_mask = torch.stack(corr_mask, dim=0)
         return corr_mask
 
-    def forward(self, batch, clf=True, lm=True):
+    def forward(self, batch, clf=True, lm=True, metamap=True):
         "Take in and process masked src and target sequences."
+        ret = []
         # this computes LM targets!! before the Generator
         u_h = self.encode(batch.s1, batch.s1_mask)
 
@@ -164,17 +168,17 @@ class DisSentT(nn.Module):
                 u = self.projection_layer(u, u_h, u_h, picked_s1_mask)
 
             clf_output = self.classifier(u)
-
+            ret.append(clf_output)
         # compute LM
         if lm:
             s1_y = self.generator(u_h)
+            ret.append(s1_y)
 
-        if clf and lm:
-            return clf_output, s1_y
-        elif clf:   
-            return clf_output
-        elif lm:
-            return s1_y
+        if metamap:
+            metamap_output = self.metamap_layer(batch.metamap)
+            ret.append(metamap_output)
+        
+        return ret
 
     def compute_clf_loss(self, logits, labels):
         loss = self.bce_loss(logits, labels)
@@ -190,6 +194,10 @@ class DisSentT(nn.Module):
                                 s_y.view(-1)).view(s_h.size(0), -1)
         seq_loss *= s_loss_mask  # mask sequence loss
         return seq_loss.mean()
+
+    def compute_metamap_loss(self, logits, labels):
+        loss = self.bce_loss(logits, labels)
+        return loss
 
 
 class LSTMEncoder(nn.Module):

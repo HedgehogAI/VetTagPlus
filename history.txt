@@ -124,4 +124,20 @@ CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_transformer_cut600_
 
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_metaloss_1e-3 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --meta_param 0.001
 
-CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/test --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cluster_param_a 1e-5 --cluster_param_b 1e-4 --cluster_param_c 1e-4
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu_transformer_cut600_clusterloss_1e-5_1e-4_1e-4 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cluster_param_a 1e-5 --cluster_param_b 1e-4 --cluster_param_c 1e-4
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_transformer_cut600_clusterloss_1e-4_1e-3_1e-3 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cluster_param_a 1e-4 --cluster_param_b 1e-3 --cluster_param_c 1e-3
+
+# 0810
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp_test --corpus pp --hypes hypes/pp_word2vec.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/csu_transformer_cut600_metaloss_1e-3/model-[x].pickle
+
+# 0811
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --inputdir exp/sage_lm/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10_metaloss_1e-3 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --meta_param 1e-3 --inputdir exp/sage_lm/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10_clusterloss_1e-4_1e-3_1e-3 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cluster_param_a 1e-4 --cluster_param_b 1e-3 --cluster_param_c 1e-3 --inputdir exp/sage_lm/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/metamap_test --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --metamap

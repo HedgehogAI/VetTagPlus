@@ -62,6 +62,7 @@ parser.add_argument("--fc_dim", type=int, default=512, help="nhid of fc layers")
 # parser.add_argument("--pool_type", type=str, default='max', help="flag if we do max pooling, which hasn't been done before")
 parser.add_argument("--reload_val", action='store_true', help="Reload the previous best epoch on validation, should be used with tied weights")
 parser.add_argument("--no_stop", default=True, action='store_true', help="no early stopping")
+parser.add_argument("--metamap", default=False, action='store_true', help="use meta map")
 # gpu
 parser.add_argument("--gpu_id", type=int, default=0, help="GPU ID")
 parser.add_argument("--seed", type=int, default=1234, help="seed")
@@ -123,7 +124,7 @@ n_special = 4
 """
 DATA
 """
-train, valid, test = get_dis(data_dir, prefix, params.corpus, params.cut_down_len)  # this stays the same
+train, valid, test = get_dis(data_dir, prefix, params.corpus, params.cut_down_len, params.metamap)  # this stays the same
 # If this is slow...we can speed it up
 # Numericalization; No padding here
 # Also, Batch class from OpenNMT will take care of target generation
@@ -184,7 +185,9 @@ config_dis_model = {
     'proj_head': params.proj_head,
     'proj_type': params.proj_type,
     'meta_param': params.meta_param,
-    'cluster_param': [params.cluster_param_a, params.cluster_param_b, params.cluster_param_c]
+    'cluster_param': [params.cluster_param_a, params.cluster_param_b, params.cluster_param_c],
+    'metamap': params.metamap,
+    'n_metamap': len(json.load(open('/home/yuhuiz/Transformer/data/meta2id.json')))
 }
 if params.cur_epochs == 1:
     if params.model_type == "lstm":
@@ -230,15 +233,20 @@ def train_epoch_csu(epoch):
     permutation = np.random.permutation(len(train['s1']))
     s1 = train['s1'][permutation]
     target = train['label'][permutation]
+    metamap = train['metamap'][permutation] if params.metamap else []
 
     for stidx in range(0, len(s1), params.batch_size):
         # prepare batch
         s1_batch = pad_batch(s1[stidx: stidx + params.batch_size], encoder['_pad_'])
         label_batch = target[stidx:stidx + params.batch_size]
-        b = Batch(s1_batch, label_batch, encoder['_pad_'], gpu_id=params.gpu_id)
+        metamap_batch = metamap[stidx:stidx + params.batch_size] if params.metamap else []
+        b = Batch(s1_batch, label_batch, metamap_batch, encoder['_pad_'], gpu_id=params.gpu_id)
 
         # model forward
-        clf_output, s1_y_hat = dis_net(b, clf=True, lm=True)
+        if params.metamap:
+            clf_output, s1_y_hat, metamap_output = dis_net(b, clf=True, lm=True, metamap=True)
+        else:
+            clf_output, s1_y_hat = dis_net(b, clf=True, lm=True, metamap=True)
 
         # evaluation
         pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)
@@ -262,6 +270,9 @@ def train_epoch_csu(epoch):
         clf_loss = dis_net.compute_clf_loss(clf_output, b.label)
         s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
         loss = clf_loss + params.lm_coef * s1_lm_loss
+        if params.metamap:
+            metamap_loss = dis_net.compute_metamap_loss(metamap_output, b.label)
+            loss += metamap_loss
         all_costs.append(loss.data.item())
         
         # backward
@@ -304,7 +315,7 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
         # prepare batch
         s1_batch = pad_batch(s1[stidx: stidx + params.batch_size], encoder['_pad_'])
         label_batch = target[stidx:stidx + params.batch_size]
-        b = Batch(s1_batch, label_batch, encoder['_pad_'], gpu_id=params.gpu_id)
+        b = Batch(s1_batch, label_batch, metamap, encoder['_pad_'], gpu_id=params.gpu_id)
 
         # model forward
         clf_output = dis_net(b, clf=True, lm=False)
