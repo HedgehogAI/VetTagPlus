@@ -13,7 +13,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 from data import get_dis, pad_batch, Batch
 from util import get_labels, TextEncoder, batchify
-from transformer import NoamOpt, make_model, make_lstm_model
+from transformer import NoamOpt, make_model, make_lstm_model, make_metamap_model
 import logging
 from sklearn import metrics
 
@@ -190,7 +190,10 @@ config_dis_model = {
     'n_metamap': len(json.load(open('/home/yuhuiz/Transformer/data/meta2id.json')))
 }
 if params.cur_epochs == 1:
-    if params.model_type == "lstm":
+    if params.metamap: # <TODO>
+        logger.info('model metamap')
+        dis_net = make_metamap_model(config_dis_model)
+    elif params.model_type == "lstm":
         logger.info('model lstm')
         dis_net = make_lstm_model(encoder, config_dis_model, word_embeddings) # ctx_embeddings
     else:
@@ -244,9 +247,9 @@ def train_epoch_csu(epoch):
 
         # model forward
         if params.metamap:
-            clf_output, s1_y_hat, metamap_output = dis_net(b, clf=True, lm=True, metamap=True)
+            clf_output = dis_net(b)
         else:
-            clf_output, s1_y_hat = dis_net(b, clf=True, lm=True, metamap=True)
+            clf_output, s1_y_hat = dis_net(b, clf=True, lm=True)
 
         # evaluation
         pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)
@@ -267,12 +270,14 @@ def train_epoch_csu(epoch):
         # assert len(p) == len(s1[stidx:stidx + params.batch_size])
 
         # loss
-        clf_loss = dis_net.compute_clf_loss(clf_output, b.label)
-        s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
-        loss = clf_loss + params.lm_coef * s1_lm_loss
         if params.metamap:
-            metamap_loss = dis_net.compute_metamap_loss(metamap_output, b.label)
-            loss += metamap_loss
+            clf_loss = dis_net.compute_clf_loss(clf_output, b.label)
+            loss = clf_loss
+        else:
+            clf_loss = dis_net.compute_clf_loss(clf_output, b.label)
+            s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
+            loss = clf_loss + params.lm_coef * s1_lm_loss
+
         all_costs.append(loss.data.item())
         
         # backward
@@ -292,7 +297,7 @@ def train_epoch_csu(epoch):
                 (round(np.mean(all_micro_r), 3), round(np.mean(all_macro_r), 3)),
                 (round(np.mean(all_micro_f1), 3), round(np.mean(all_macro_f1), 3)),
                 model_opt.rate(),
-                dis_net.tgt_embed[0].lut.weight.data.norm()))
+                0 if params.metamap else dis_net.tgt_embed[0].lut.weight.data.norm()))
             all_costs, all_em, all_micro_p, all_micro_r, all_micro_f1, all_macro_p, all_macro_r, all_macro_f1 = [], [], [], [], [], [], [], []
 
     # save
@@ -309,16 +314,22 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
     # data without shuffle
     s1 = valid['s1'] if eval_type == 'valid' else test['s1']
     target = valid['label'] if eval_type == 'valid' else test['label']
+    if params.metamap: metamap = valid['metamap'] if eval_type == 'valid' else test['metamap']
+    else: metamap = []
     valid_preds, valid_labels = [], []
 
     for stidx in range(0, len(s1), params.batch_size):
         # prepare batch
         s1_batch = pad_batch(s1[stidx: stidx + params.batch_size], encoder['_pad_'])
         label_batch = target[stidx:stidx + params.batch_size]
-        b = Batch(s1_batch, label_batch, metamap, encoder['_pad_'], gpu_id=params.gpu_id)
+        metamap_batch = metamap[stidx:stidx + params.batch_size] if params.metamap else []
+        b = Batch(s1_batch, label_batch, metamap_batch, encoder['_pad_'], gpu_id=params.gpu_id)
 
         # model forward
-        clf_output = dis_net(b, clf=True, lm=False)
+        if params.metamap:
+            clf_output = dis_net(b)
+        else:
+            clf_output = dis_net(b, clf=True, lm=False)
 
         # evaluation
         pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)
@@ -424,7 +435,7 @@ if __name__ == '__main__':
         if len(params.inputdir) != 0:
             logger.info('Load Model from %s' % (params.inputdir))
             dis_net.load_state_dict(torch.load(params.inputdir).state_dict())
-        # evaluate_epoch_csu(epoch)
+        evaluate_epoch_csu(epoch)
         # evaluate_epoch_csu(epoch, eval_type='test')
         while not stop_training and epoch <= params.n_epochs:
             train_epoch_csu(epoch)

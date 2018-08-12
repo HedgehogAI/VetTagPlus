@@ -120,9 +120,6 @@ class DisSentT(nn.Module):
         )
 
         self.projection_layer = projection_layer
-        
-        if config['metamap']:
-            self.metamap_layer = nn.Linear(config['n_metamap'], config['n_classes'])
 
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
         self.bce_loss = nn.BCEWithLogitsLoss()
@@ -148,9 +145,8 @@ class DisSentT(nn.Module):
         corr_mask = torch.stack(corr_mask, dim=0)
         return corr_mask
 
-    def forward(self, batch, clf=True, lm=True, metamap=True):
+    def forward(self, batch, clf=True, lm=True):
         "Take in and process masked src and target sequences."
-        ret = []
         # this computes LM targets!! before the Generator
         u_h = self.encode(batch.s1, batch.s1_mask)
 
@@ -168,17 +164,17 @@ class DisSentT(nn.Module):
                 u = self.projection_layer(u, u_h, u_h, picked_s1_mask)
 
             clf_output = self.classifier(u)
-            ret.append(clf_output)
+        
         # compute LM
         if lm:
             s1_y = self.generator(u_h)
-            ret.append(s1_y)
-
-        if metamap:
-            metamap_output = self.metamap_layer(batch.metamap)
-            ret.append(metamap_output)
         
-        return ret
+        if clf and lm:
+            return clf_output, s1_y
+        elif clf:   
+            return clf_output
+        elif lm:
+            return s1_y
 
     def compute_clf_loss(self, logits, labels):
         loss = self.bce_loss(logits, labels)
@@ -194,10 +190,6 @@ class DisSentT(nn.Module):
                                 s_y.view(-1)).view(s_h.size(0), -1)
         seq_loss *= s_loss_mask  # mask sequence loss
         return seq_loss.mean()
-
-    def compute_metamap_loss(self, logits, labels):
-        loss = self.bce_loss(logits, labels)
-        return loss
 
 
 class LSTMEncoder(nn.Module):
@@ -217,6 +209,8 @@ class LSTMEncoder(nn.Module):
 
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
         self.bce_loss = nn.BCEWithLogitsLoss()
+        self.meta_loss = MetaLoss(config)
+        self.cluster_loss = ClusterLoss(config)
     
     def encode(self, tgt, lengths):
         return self.autolen_rnn(self.tgt_embed(tgt), lengths)
@@ -269,7 +263,12 @@ class LSTMEncoder(nn.Module):
             return s1_y
     
     def compute_clf_loss(self, logits, labels):
-        return self.bce_loss(logits, labels).mean()
+        loss = self.bce_loss(logits, labels).mean()
+        if self.config['meta_param'] != 0.0:
+            loss += self.meta_loss(logits, labels)
+        if self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
+            loss += self.cluster_loss(self.classifier[-1].weight, len(labels)) # <TODO> softmax weight?
+        return loss
     
     def compute_lm_loss(self, s_h, s_y, s_loss_mask):
         # get the ingredients...compute loss
@@ -277,6 +276,20 @@ class LSTMEncoder(nn.Module):
                                 s_y.view(-1)).view(s_h.size(0), -1)
         seq_loss *= s_loss_mask  # mask sequence loss
         return seq_loss.mean()
+
+
+class MetamapModel(nn.Module):
+    def __init__(self, config):
+        super(MetamapModel, self).__init__()
+        self.classifier = nn.Linear(config['n_metamap'], config['n_classes'])
+        self.bce_loss = nn.BCEWithLogitsLoss()
+
+    def forward(self, batch):
+        clf_output = self.classifier(batch.metamap)
+        return clf_output
+
+    def compute_clf_loss(self, logits, labels):
+        return self.bce_loss(logits, labels).mean()
 
 
 def make_model(encoder, config, word_embeddings=None):
@@ -355,6 +368,11 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
         if p.dim() > 1 and p.requires_grad is True:
             nn.init.xavier_uniform(p)
     logging.info(model.tgt_embed[0].lut.weight.data.norm())
+    return model
+
+
+def make_metamap_model(config):
+    model = MetamapModel(config)
     return model
 
 
