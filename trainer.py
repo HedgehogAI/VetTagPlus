@@ -435,7 +435,7 @@ if __name__ == '__main__':
         if len(params.inputdir) != 0:
             logger.info('Load Model from %s' % (params.inputdir))
             dis_net.load_state_dict(torch.load(params.inputdir).state_dict())
-        evaluate_epoch_csu(epoch)
+        # evaluate_epoch_csu(epoch)
         # evaluate_epoch_csu(epoch, eval_type='test')
         while not stop_training and epoch <= params.n_epochs:
             train_epoch_csu(epoch)

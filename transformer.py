@@ -181,7 +181,7 @@ class DisSentT(nn.Module):
         if self.config['meta_param'] != 0.0:
             loss += self.meta_loss(logits, labels)
         if self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
-            loss += self.cluster_loss(self.classifier[-1].weight, len(labels)) # <TODO> softmax weight?
+            loss += self.cluster_loss(self.classifier[-1].weight, len(labels)) 
         return loss
 
     def compute_lm_loss(self, s_h, s_y, s_loss_mask):
