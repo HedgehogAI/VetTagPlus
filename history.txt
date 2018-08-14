@@ -10,9 +10,6 @@ CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/wiki103_lm --gpu_id 0 -
 
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/wiki103_lm_lstm --gpu_id 0 --n_epochs 15 --no_stop --train_emb --tied --d_ff 2048 --n_heads 8 --n_layers 6 --batch_size 32 --bptt_size 50 --hypes hypes/wiki103.json --model_type lstm
 
-
-
-
 CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_test  --no_stop --train_emb --tied --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4
 
 CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp_test  --no_stop --train_emb --tied --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --model_type transformer
@@ -130,18 +127,37 @@ CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_transformer_cut600_
 
 # 0810
 
-CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp_test --corpus pp --hypes hypes/pp_word2vec.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/csu_transformer_cut600_metaloss_1e-3/model-[x].pickle
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp--corpus pp --hypes hypes/pp_word2vec.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/csu_transformer_cut600_metaloss_1e-3/model-[x].pickle
 
 # 0811
 
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --inputdir exp/sage_lm/model-10.pickle 
 
-CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10_metaloss_1e-3 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --meta_param 1e-3 --inputdir exp/sage_lm/model-10.pickle 
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10_metaloss_1e-2 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --meta_param 1e-2 --inputdir exp/sage_lm/model-10.pickle 
 
-CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10_clusterloss_1e-4_1e-3_1e-3 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cluster_param_a 1e-4 --cluster_param_b 1e-3 --cluster_param_c 1e-3 --inputdir exp/sage_lm/model-10.pickle 
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/csu_transformer_cut600_pretrainedlm10_clusterloss_1e-3_1e-2_1e-2 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cluster_param_a 1e-3 --cluster_param_b 1e-2 --cluster_param_c 1e-2 --inputdir exp/sage_lm/model-10.pickle 
 
 CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu_metamap --corpus csu --hypes hypes/csu_word2vec.json --batch_size 20 --cut_down_len 10 --metamap
 
 CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp_test --corpus pp --hypes hypes/pp_word2vec.json --batch_size 20 --cut_down_len 10 --metamap --inputdir exp/csu_metamap/model-6.pickle
 
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/test --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cluster_param_a 1e-4 --cluster_param_b 1e-3 --cluster_param_c 1e-3 --inputdir exp/sage_lm/model-10.pickle 
+
+# 0813
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp --corpus pp --hypes hypes/pp_word2vec.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/nonbpe/csu_transformer_cut600/model-7.pickle
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/nonbpe/csu_transformer_cut600/model-7.pickle
+
+# RENAME
+
+➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe_no_lmloss lstm
+➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe lstm_auxiliary
+➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe_pretrainedlm10_no_lmloss lstm_pretrain
+➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe_pretrainlm10 lstm_auxiliary_pretrain
+➜  bpe git:(master) ✗ mv csu_transformer_cut600_bpe_no_lmloss transformer
+➜  bpe git:(master) ✗ mv csu_transformer_cut600_bpe transformer_auxiliary
+➜  bpe git:(master) ✗ mv csu_transformer_cut600_bpe_pretrain_lm8_no_lmloss transformer_pretrain
+➜  bpe git:(master) ✗ mv csu_transformer_cut600_bpe_pretrain_lm8 transformer_auxiliary_pretrain
+➜  bpe git:(master) ✗ mv sage_lm_bpe sage_transformer
+➜  bpe git:(master) ✗ mv sage_lm_lstm_bpe sage_lstm

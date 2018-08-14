@@ -337,6 +337,7 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
         valid_labels.extend(label_batch.tolist())
 
     valid_preds, valid_labels = np.array(valid_preds), np.array(valid_labels)
+    if eval_type == 'test': np.save('%s/preds-%s.npy' % (params.outputdir, str(epoch)), valid_preds)
     em = metrics.accuracy_score(valid_labels, valid_preds)
     p, r, f1, s = metrics.precision_recall_fscore_support(valid_labels, valid_preds, average=None)
     micro_p, micro_r, micro_f1 = np.average(p, weights=s), np.average(r, weights=s), np.average(f1, weights=s)
@@ -431,6 +432,10 @@ if __name__ == '__main__':
         del dis_net
         dis_net = torch.load(params.inputdir)
         evaluate_epoch_csu(epoch, eval_type='test')
+    # elif params.corpus == 'csu':
+    #     del dis_net
+    #     dis_net = torch.load(params.inputdir)
+    #     evaluate_epoch_csu(epoch, eval_type='test')
     elif params.corpus == 'csu':
         if len(params.inputdir) != 0:
             logger.info('Load Model from %s' % (params.inputdir))
