@@ -125,6 +125,7 @@ class DisSentT(nn.Module):
         self.bce_loss = nn.BCEWithLogitsLoss()
         self.meta_loss = MetaLoss(config)
         self.cluster_loss = ClusterLoss(config)
+        self.cooccur_loss = CoOccurenceLoss(config)
 
     def encode(self, tgt, tgt_mask):
         # tgt, tgt_mask need to be on CUDA before being put in here
@@ -180,8 +181,10 @@ class DisSentT(nn.Module):
         loss = self.bce_loss(logits, labels)
         if self.config['meta_param'] != 0.0:
             loss += self.meta_loss(logits, labels)
-        if self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
+        elif self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
             loss += self.cluster_loss(self.classifier[-1].weight, len(labels)) 
+        elif self.config['cooccur_param'] != 0.0: 
+            loss += self.cooccur_loss(self.classifier[-1].weight) 
         return loss
 
     def compute_lm_loss(self, s_h, s_y, s_loss_mask):
@@ -642,4 +645,108 @@ class ClusterLoss(nn.Module):
                                                        omega_within * self.config['cluster_param'][2]) / batch_size
 
         return aux_loss
+
+
+def log_of_array_ignoring_zeros(M):
+    """Returns an array containing the logs of the nonzero
+    elements of M. Zeros are left alone since log(0) isn't
+    defined.
+    """
+    log_M = M.copy()
+    mask = log_M > 0
+    log_M[mask] = np.log(log_M[mask])
+    return log_M
+
+
+def observed_over_expected(df):
+    col_totals = df.sum(axis=0)
+    total = col_totals.sum()
+    row_totals = df.sum(axis=1)
+    expected = np.outer(row_totals, col_totals) / total
+    oe = df / expected
+    return oe
+
+
+def pmi(df, positive=True):
+    df = observed_over_expected(df)
+    # Silence distracting warnings about log(0):
+    with np.errstate(divide='ignore'):
+        df = np.log(df)
+    df[np.isnan(df)] = 0.0  # log(0) = 0
+    df[np.isinf(df)] = 0.0
+    if positive:
+        df[df < 0] = 0.0
+    return df
+
+
+class CoOccurenceLoss(nn.Module):
+    def __init__(self, config,
+                 use_csu=True,
+                 glove=False,
+                 x_max=100,
+                 alpha=0.75,
+                 ppmi=False,
+                 csu_path='./data/csu/label_co_matrix.npy',
+                 pp_path='./data/csu/pp_combined_label_co_matrix.npy',
+                 device=-1):
+        super(CoOccurenceLoss, self).__init__()
+        self.co_mat_path = csu_path if use_csu else pp_path
+        self.co_mat = np.load(self.co_mat_path)
+        self.X = self.co_mat
+        self.glove = glove
+
+        logging.info("using co_matrix {}".format(self.co_mat_path))
+        self.n = config['fc_dim']  # N-dim rep
+        self.m = config['n_classes']
+
+        if self.glove:
+            self.C = torch.empty(self.m, self.n)
+            self.C = Variable(self.C.uniform_(-0.5, 0.5)).cuda(device)
+            self.B = torch.empty(2, self.m)
+            self.B = Variable(self.B.uniform_(-0.5, 0.5)).cuda(device)
+
+            self.indices = list(range(self.m))  # label_size
+
+            # Precomputable GloVe values:
+            self.X_log = log_of_array_ignoring_zeros(self.X)
+            self.X_weights = (np.minimum(self.X, xmax) / xmax) ** alpha  # eq. (9)
+
+            # iterate on the upper triangular matrix, off-diagonal
+            self.iu1 = np.triu_indices(41, 1)  # 820 iterations
+        else:
+
+            self.X = pmi(self.X, positive=ppmi)
+            self.X_mask = (self.X != 0.).astype(np.float32)
+            iu1 = np.triu_indices(42, 1) # <ZYH> (42, 1)
+            self.X_mask[iu1] = 0.
+
+            self.X = Variable(torch.FloatTensor(self.X), requires_grad=False).cuda(device)
+            # self.X = torch.clamp(self.X, max=4.)  # this is data specific...
+            self.X_mask = Variable(torch.FloatTensor(self.X_mask), requires_grad=False).cuda(device)
+            self.X_final = self.X * self.X_mask
+
+            self.mse = nn.MSELoss()
+
+    def forward(self, softmax_weight):
+        # this computes a straight-through pass of the GloVE objective
+        # similar to "Auxiliary" training
+        # return the loss
+        # softmax_weight: [d, |Y|]
+        if self.glove:
+            loss = 0.
+            for i, j in zip(self.iu1[0], self.iu1[1]):
+                if self.X[i, j] > 0.0:
+                    # Cost is J' based on eq. (8) in the paper:
+                    # (1, |Y|) dot (1, |Y|)
+                    diff = softmax_weight[:, i].dot(self.C[j]) + self.B[0, i] + self.B[1, j] - self.X_log[i, j]
+                    loss += self.X_weights[i, j] * diff   # f(X_ij) * (w_i w_j + b_i + b_j - log X_ij)
+                    # this is the summation, not average
+        else:
+            # softmax_weight: (d, m)
+            # (m, d) (d, m)
+            a = torch.matmul(softmax_weight, torch.transpose(softmax_weight, 1, 0))
+            a = a * self.X_mask
+            
+            loss = self.mse(a, self.X_final) # <ZYH> mask
+        return loss
             

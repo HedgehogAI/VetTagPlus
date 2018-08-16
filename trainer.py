@@ -52,6 +52,7 @@ parser.add_argument("--meta_param", type=float, default=0.0, help="meta param")
 parser.add_argument("--cluster_param_a", type=float, default=0.0, help="cluster param a")
 parser.add_argument("--cluster_param_b", type=float, default=0.0, help="cluster param b")
 parser.add_argument("--cluster_param_c", type=float, default=0.0, help="cluster param c")
+parser.add_argument("--cooccur_param", type=float, default=0.0, help="cooccur param")
 # for now we fix non-linearity to whatever PyTorch provides...could be SELU
 # model
 parser.add_argument("--d_ff", type=int, default=2048, help="decoder nhid dimension")
@@ -186,6 +187,7 @@ config_dis_model = {
     'proj_type': params.proj_type,
     'meta_param': params.meta_param,
     'cluster_param': [params.cluster_param_a, params.cluster_param_b, params.cluster_param_c],
+    'cooccur_param': params.cooccur_param,
     'metamap': params.metamap,
     'n_metamap': len(json.load(open('/home/yuhuiz/Transformer/data/meta2id.json')))
 }
@@ -204,7 +206,7 @@ else:
     # if starting epoch is not 1, we resume training
     # 1. load in model
     # 2. resume with the previous learning rate
-    model_path = pjoin(params.outputdir, params.outputmodelname + ".pickle")  # this is the best model
+    model_path = pjoin(params.outputdir, params.outputmodelname + "-%s.pickle" % (str(params.cur_epochs - 1)))  # this is the best model
     # this might have conflicts with gpu_idx...
     dis_net = torch.load(model_path)
 

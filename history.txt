@@ -149,6 +149,26 @@ CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/pp --corpus pp --hypes 
 
 CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/csu --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/nonbpe/csu_transformer_cut600/model-7.pickle
 
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_pretrainedlm10_cooccur_loss_1e-3_2 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cooccur_param 1e-3 --inputdir exp/nonbpe/sage_transformer/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_pretrainedlm10_cooccur_loss_1e-3_with_normalization_2 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cooccur_param 1e-3 --inputdir exp/nonbpe/sage_transformer/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/analysis/pp --corpus pp --hypes hypes/pp_word2vec.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/csu_transformer_cut600_pretrainedlm10_clusterloss_1e-3_1e-2_1e-2/model-9.pickle
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_no_projection --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --model_type transformer --cut_down_len 600 --train_emb  
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_projection --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --model_type transformer --cut_down_len 600 --train_emb --proj_head 4 
+
+# 0815 
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_pretrainedlm10_cooccur_loss_1e-3_with_normalization --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cooccur_param 1e-3 --cur_epochs 11 --n_epochs 20
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_pretrainedlm10_cooccur_loss_1e-2_fixed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cooccur_param 1e-2 --inputdir exp/nonbpe/sage_transformer/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_pretrainedlm10_cooccur_loss_1e-3_fixed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cooccur_param 1e-3 --inputdir exp/nonbpe/sage_transformer/model-10.pickle 
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/analysis/pp --corpus pp --hypes hypes/pp_word2vec.json --batch_size 10 --proj_head 1 --cut_down_len 600 --inputdir exp/csu_transformer_cut600_no_projection/model-6.pickle
+
 # RENAME
 
 ➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe_no_lmloss lstm
