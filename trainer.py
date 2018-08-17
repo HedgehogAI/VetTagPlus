@@ -192,10 +192,10 @@ config_dis_model = {
     'n_metamap': len(json.load(open('/home/yuhuiz/Transformer/data/meta2id.json')))
 }
 if params.cur_epochs == 1:
-    if params.metamap: # <TODO>
-        logger.info('model metamap')
-        dis_net = make_metamap_model(config_dis_model)
-    elif params.model_type == "lstm":
+    if params.model_type == "lstm":
+        if params.metamap:
+            print('lstm not support metamap')
+            exit(-1)
         logger.info('model lstm')
         dis_net = make_lstm_model(encoder, config_dis_model, word_embeddings) # ctx_embeddings
     else:
@@ -248,10 +248,7 @@ def train_epoch_csu(epoch):
         b = Batch(s1_batch, label_batch, metamap_batch, encoder['_pad_'], gpu_id=params.gpu_id)
 
         # model forward
-        if params.metamap:
-            clf_output = dis_net(b)
-        else:
-            clf_output, s1_y_hat = dis_net(b, clf=True, lm=True)
+        clf_output, s1_y_hat = dis_net(b, clf=True, lm=True)
 
         # evaluation
         pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)
@@ -272,13 +269,10 @@ def train_epoch_csu(epoch):
         # assert len(p) == len(s1[stidx:stidx + params.batch_size])
 
         # loss
-        if params.metamap:
-            clf_loss = dis_net.compute_clf_loss(clf_output, b.label)
-            loss = clf_loss
-        else:
-            clf_loss = dis_net.compute_clf_loss(clf_output, b.label)
-            s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
-            loss = clf_loss + params.lm_coef * s1_lm_loss
+
+        clf_loss = dis_net.compute_clf_loss(clf_output, b.label)
+        s1_lm_loss = dis_net.compute_lm_loss(s1_y_hat, b.s1_y, b.s1_loss_mask)
+        loss = clf_loss + params.lm_coef * s1_lm_loss
 
         all_costs.append(loss.data.item())
         
@@ -299,7 +293,7 @@ def train_epoch_csu(epoch):
                 (round(np.mean(all_micro_r), 3), round(np.mean(all_macro_r), 3)),
                 (round(np.mean(all_micro_f1), 3), round(np.mean(all_macro_f1), 3)),
                 model_opt.rate(),
-                0 if params.metamap else dis_net.tgt_embed[0].lut.weight.data.norm()))
+                dis_net.tgt_embed[0].lut.weight.data.norm()))
             all_costs, all_em, all_micro_p, all_micro_r, all_micro_f1, all_macro_p, all_macro_r, all_macro_f1 = [], [], [], [], [], [], [], []
 
     # save
@@ -328,10 +322,7 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
         b = Batch(s1_batch, label_batch, metamap_batch, encoder['_pad_'], gpu_id=params.gpu_id)
 
         # model forward
-        if params.metamap:
-            clf_output = dis_net(b)
-        else:
-            clf_output = dis_net(b, clf=True, lm=False)
+        clf_output = dis_net(b, clf=True, lm=False)
 
         # evaluation
         pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)

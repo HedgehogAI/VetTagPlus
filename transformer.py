@@ -115,17 +115,24 @@ class DisSentT(nn.Module):
 
         self.classifier = nn.Sequential(
             nn.Linear(config['d_model'] * config['proj_head'], config['fc_dim']),
-            nn.Linear(config['fc_dim'], config['fc_dim']),
+            nn.Linear(2 * config['fc_dim'] if config['metamap'] else config['fc_dim'], config['fc_dim']),
             nn.Linear(config['fc_dim'], config['n_classes'])
         )
+
+        if config['metamap']:
+            self.metamap_layer = nn.Linear(config['n_metamap'], config['fc_dim'])
 
         self.projection_layer = projection_layer
 
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
         self.bce_loss = nn.BCEWithLogitsLoss()
-        self.meta_loss = MetaLoss(config)
-        self.cluster_loss = ClusterLoss(config)
-        self.cooccur_loss = CoOccurenceLoss(config)
+
+        if self.config['meta_param'] != 0.0:
+            self.meta_loss = MetaLoss(config)
+        elif self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
+            self.cluster_loss = ClusterLoss(config)
+        elif self.config['cooccur_param'] != 0.0: 
+            self.cooccur_loss = CoOccurenceLoss(config)
 
     def encode(self, tgt, tgt_mask):
         # tgt, tgt_mask need to be on CUDA before being put in here
@@ -164,7 +171,13 @@ class DisSentT(nn.Module):
                 picked_s1_mask = self.pick_mask(batch.s1_mask, batch.s1_lengths)
                 u = self.projection_layer(u, u_h, u_h, picked_s1_mask)
 
-            clf_output = self.classifier(u)
+            if self.config['metamap']:
+                v = self.metamap_layer(batch.metamap)
+                u = self.classifier[0](u)
+                x = torch.cat([u, v], 1)
+                clf_output = self.classifier[2](self.classifier[1](x))
+            else:
+                clf_output = self.classifier(u)
         
         # compute LM
         if lm:

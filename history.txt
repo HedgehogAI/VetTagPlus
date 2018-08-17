@@ -169,6 +169,10 @@ CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/csu_transformer_c
 
 CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/analysis/pp --corpus pp --hypes hypes/pp_word2vec.json --batch_size 10 --proj_head 1 --cut_down_len 600 --inputdir exp/csu_transformer_cut600_no_projection/model-6.pickle
 
+# 0816
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_metamap --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --metamap 
+
 # RENAME
 
 ➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe_no_lmloss lstm
