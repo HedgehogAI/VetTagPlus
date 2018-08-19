@@ -221,13 +221,22 @@ class LSTMEncoder(nn.Module):
             nn.Linear(config['fc_dim'], config['fc_dim']),
             nn.Linear(config['fc_dim'], config['n_classes'])
         )
+
+        if config['metamap']:
+            self.metamap_layer = nn.Linear(config['n_metamap'], config['fc_dim'])
+
         self.projection_layer = projection_layer
 
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
         self.bce_loss = nn.BCEWithLogitsLoss()
-        self.meta_loss = MetaLoss(config)
-        self.cluster_loss = ClusterLoss(config)
-    
+        
+        if self.config['meta_param'] != 0.0:
+            self.meta_loss = MetaLoss(config)
+        elif self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
+            self.cluster_loss = ClusterLoss(config)
+        elif self.config['cooccur_param'] != 0.0: 
+            self.cooccur_loss = CoOccurenceLoss(config)
+
     def encode(self, tgt, lengths):
         return self.autolen_rnn(self.tgt_embed(tgt), lengths)
     
@@ -268,7 +277,14 @@ class LSTMEncoder(nn.Module):
             if self.config['proj_head'] != 1:
                 picked_s1_mask = self.pick_mask(batch.s1_mask, batch.s1_lengths)
                 u = self.projection_layer(u, u_h, u_h, picked_s1_mask)
-            clf_output = self.classifier(u)
+            if self.config['metamap']:
+                v = self.metamap_layer(batch.metamap)
+                u = self.classifier[0](u)
+                x = torch.cat([u, v], 1)
+                clf_output = self.classifier[2](self.classifier[1](x))
+            else:
+                clf_output = self.classifier(u)
+                
         if lm:
             s1_y = self.generator(u_h)
         if clf and lm:
@@ -282,8 +298,10 @@ class LSTMEncoder(nn.Module):
         loss = self.bce_loss(logits, labels).mean()
         if self.config['meta_param'] != 0.0:
             loss += self.meta_loss(logits, labels)
-        if self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
-            loss += self.cluster_loss(self.classifier[-1].weight, len(labels)) # <TODO> softmax weight?
+        elif self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
+            loss += self.cluster_loss(self.classifier[-1].weight, len(labels)) 
+        elif self.config['cooccur_param'] != 0.0: 
+            loss += self.cooccur_loss(self.classifier[-1].weight) 
         return loss
     
     def compute_lm_loss(self, s_h, s_y, s_loss_mask):
