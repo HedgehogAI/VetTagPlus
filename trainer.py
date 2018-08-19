@@ -193,9 +193,6 @@ config_dis_model = {
 }
 if params.cur_epochs == 1:
     if params.model_type == "lstm":
-        if params.metamap:
-            print('lstm not support metamap')
-            exit(-1)
         logger.info('model lstm')
         dis_net = make_lstm_model(encoder, config_dis_model, word_embeddings) # ctx_embeddings
     else:
