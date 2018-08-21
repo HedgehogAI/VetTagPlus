@@ -183,6 +183,69 @@ CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/csu_transformer_c
 + no projection
 CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_no_lm_no_projection --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --model_type transformer --cut_down_len 600 --train_emb --lm_coef 0.0
 
+# 0819
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/analysis/pp --corpus pp --hypes hypes/pp_word2vec.json --batch_size 10 --proj_head 1 --cut_down_len 600 --inputdir exp/csu_transformer_cut600_no_projection/model-6.pickle
+
++ cooccur loss 1e-4 d
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_pretrainedlm10_cooccur_loss_1e-4_fixed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cooccur_param 1e-4 --inputdir exp/nonbpe/sage_transformer/model-10.pickle 
+
++ cooccur loss 1e-3
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_pretrainedlm10_cooccur_loss_1e-3_fixed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cooccur_param 1e-3 --inputdir exp/nonbpe/sage_transformer/model-10.pickle 
+
++ cooccur loss 1e-2
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_pretrainedlm10_cooccur_loss_1e-2_fixed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --cooccur_param 1e-2 --inputdir exp/nonbpe/sage_transformer/model-10.pickle 
+
++ to compare projection layer
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_no_projection --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --model_type transformer --cut_down_len 600 --train_emb
+
++ no projection
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_no_lm_no_projection --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --model_type transformer --cut_down_len 600 --train_emb --lm_coef 0.0
+
++ metamap
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_metamap --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --metamap --lm_coef 0.0
+
++ metamap
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_auxiliary_metamap --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --metamap
+
++ to increase em 23.8
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_pretrainedlm10 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --inputdir exp/nonbpe/sage_transformer/model-10.pickle 
+
++ to decrease em 26.5
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/csu_transformer_cut600_auxiliary --corpus csu --hypes hypes/csu_word2vec.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb
+
++ lstm metamap
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/hloss/csu_lstm_cut600_metamap --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --metamap --lm_coef 0.0
+
++ lstm metamap
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/csu_lstm_cut600_auxiliary_metamap --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --metamap
+
++ cooccur loss 1e-4 c
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/csu_lstm_cut600_pretrainedlm10_cooccur_loss_1e-4_fixed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --cooccur_param 1e-4 --inputdir exp/nonbpe/sage_lstm/model-10.pickle 
+
+
++ cooccur loss 1e-3
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/csu_lstm_cut600_pretrainedlm10_cooccur_loss_1e-3_fixed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --cooccur_param 1e-3 --inputdir exp/nonbpe/sage_lstm/model-10.pickle 
+
++ cooccur loss 1e-2
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/hloss/csu_lstm_cut600_pretrainedlm10_cooccur_loss_1e-2_fixed --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --cooccur_param 1e-2 --inputdir exp/nonbpe/sage_lstm/model-10.pickle 
+
+why lstm metamap takes less memory than vanilla lstm
+
++ meta
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/csu_lstm_cut600_pretrainedlm10_meta_1e-2 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --meta_param 1e-2 --inputdir exp/nonbpe/sage_lstm/model-10.pickle 
+
++ cluster
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/hloss/csu_lstm_cut600_pretrainedlm10_cluster_1e-4_1e-3_1e-3 --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --cluster_param_a 1e-4 --cluster_param_b 1e-3 --cluster_param_c 1e-3 --inputdir exp/nonbpe/sage_lstm/model-10.pickle 
+
++ to compare projection layer a
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/hloss/csu_lstm_cut600_no_projection --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --model_type lstm --cut_down_len 600 --train_emb
+
++ no projection b
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/hloss/csu_lstm_cut600_no_lm_no_projection --corpus csu --hypes hypes/csu_word2vec.json --batch_size 10 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0
+
+
+
+
 # RENAME
 
 ➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe_no_lmloss lstm
