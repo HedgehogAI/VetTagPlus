@@ -716,13 +716,14 @@ class CoOccurenceLoss(nn.Module):
                  glove=True,
                  xmax=1000,
                  alpha=0.75,
-                 ppmi=True,
+                 ppmi=False,
                  csu_path='./data/csu/label_co_matrix.npy',
                  pp_path='./data/csu/pp_combined_label_co_matrix.npy',
                  context_path='./data/csu/C.npy',
                  bias_path='./data/csu/B.npy',
                  device=-1):
         super(CoOccurenceLoss, self).__init__()
+        self.config = config
         self.co_mat_path = csu_path if use_csu else pp_path
         self.co_mat = np.load(self.co_mat_path)
         self.X = self.co_mat
@@ -778,5 +779,5 @@ class CoOccurenceLoss(nn.Module):
             a = a * self.X_mask
             
             loss = self.mse(a, self.X_final) # <ZYH> mask
-        return loss
+        return loss * self.config['cooccur_param']
             
