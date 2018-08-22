@@ -197,7 +197,7 @@ class DisSentT(nn.Module):
         elif self.config['cluster_param'] != [0.0, 0.0, 0.0]: 
             loss += self.cluster_loss(self.classifier[-1].weight, len(labels)) 
         elif self.config['cooccur_param'] != 0.0: 
-            loss += self.cooccur_loss(self.classifier[-1].weight) 
+            loss += self.cooccur_loss(self.classifier[-1].weight, self.classifier[-1].bias) 
         return loss
 
     def compute_lm_loss(self, s_h, s_y, s_loss_mask):
@@ -713,12 +713,14 @@ def pmi(df, positive=True):
 class CoOccurenceLoss(nn.Module):
     def __init__(self, config,
                  use_csu=True,
-                 glove=False,
-                 x_max=100,
+                 glove=True,
+                 xmax=1000,
                  alpha=0.75,
-                 ppmi=False,
+                 ppmi=True,
                  csu_path='./data/csu/label_co_matrix.npy',
                  pp_path='./data/csu/pp_combined_label_co_matrix.npy',
+                 context_path='./data/csu/C.npy',
+                 bias_path='./data/csu/B.npy',
                  device=-1):
         super(CoOccurenceLoss, self).__init__()
         self.co_mat_path = csu_path if use_csu else pp_path
@@ -731,19 +733,16 @@ class CoOccurenceLoss(nn.Module):
         self.m = config['n_classes']
 
         if self.glove:
-            self.C = torch.empty(self.m, self.n)
-            self.C = Variable(self.C.uniform_(-0.5, 0.5)).cuda(device)
-            self.B = torch.empty(2, self.m)
-            self.B = Variable(self.B.uniform_(-0.5, 0.5)).cuda(device)
-
-            self.indices = list(range(self.m))  # label_size
-
+            self.C = np.load(context_path)
+            self.C = Variable(torch.FloatTensor(self.C), requires_grad=False).cuda(device)
+            self.B = np.load(bias_path)
+            self.B = Variable(torch.FloatTensor(self.B), requires_grad=False).cuda(device)
             # Precomputable GloVe values:
             self.X_log = log_of_array_ignoring_zeros(self.X)
-            self.X_weights = (np.minimum(self.X, xmax) / xmax) ** alpha  # eq. (9)
-
-            # iterate on the upper triangular matrix, off-diagonal
-            self.iu1 = np.triu_indices(41, 1)  # 820 iterations
+            self.X_log = Variable(torch.FloatTensor(self.X_log), requires_grad=False).cuda(device)
+            self.X_weights = (np.minimum(self.X, xmax) / xmax) ** alpha
+            self.X_weights = Variable(torch.FloatTensor(self.X_weights), requires_grad=False).cuda(device)
+            self.iu1 = np.triu_indices(42, 1)
         else:
 
             self.X = pmi(self.X, positive=ppmi)
@@ -758,7 +757,7 @@ class CoOccurenceLoss(nn.Module):
 
             self.mse = nn.MSELoss()
 
-    def forward(self, softmax_weight):
+    def forward(self, softmax_weight, softmax_bias):
         # this computes a straight-through pass of the GloVE objective
         # similar to "Auxiliary" training
         # return the loss
@@ -769,8 +768,8 @@ class CoOccurenceLoss(nn.Module):
                 if self.X[i, j] > 0.0:
                     # Cost is J' based on eq. (8) in the paper:
                     # (1, |Y|) dot (1, |Y|)
-                    diff = softmax_weight[:, i].dot(self.C[j]) + self.B[0, i] + self.B[1, j] - self.X_log[i, j]
-                    loss += self.X_weights[i, j] * diff   # f(X_ij) * (w_i w_j + b_i + b_j - log X_ij)
+                    diff = softmax_weight[i].dot(self.C[j]) + softmax_bias[i] + self.B[1, j] - self.X_log[i, j]
+                    loss += 0.5 * self.X_weights[i, j] * diff * diff   # f(X_ij) * (w_i w_j + b_i + b_j - log X_ij)
                     # this is the summation, not average
         else:
             # softmax_weight: (d, m)
