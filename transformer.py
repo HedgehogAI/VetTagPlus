@@ -735,9 +735,11 @@ class CoOccurenceLoss(nn.Module):
 
         if self.glove:
             self.C = np.load(context_path)
-            self.C = Variable(torch.FloatTensor(self.C), requires_grad=False).cuda(device)
+            self.C = Variable(torch.FloatTensor(self.C), requires_grad=True).cuda(device)
+            nn.init.xavier_uniform(self.C)
             self.B = np.load(bias_path)
-            self.B = Variable(torch.FloatTensor(self.B), requires_grad=False).cuda(device)
+            self.B = Variable(torch.FloatTensor(self.B), requires_grad=True).cuda(device)
+            nn.init.xavier_uniform(self.B)
             # Precomputable GloVe values:
             self.X_log = log_of_array_ignoring_zeros(self.X)
             self.X_log = Variable(torch.FloatTensor(self.X_log), requires_grad=False).cuda(device)

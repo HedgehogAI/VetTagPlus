@@ -128,7 +128,7 @@ def get_dis(data_dir, prefix, discourse_tag, cut_down_len, metamap=False):
                     target[data_type].append(0) # No label
         if metamap:
             metamap_word2id = '/home/yuhuiz/Transformer/data/meta2id.json' # <TODO>
-            metamap_path = pjoin(data_dir, prefix + "_metamap_" + data_type + ".tsv") # <TODO>
+            metamap_path = pjoin(data_dir, prefix.split['_'][0] + "_metamap_" + data_type + ".tsv") # <TODO>
             meta2id = json.load(open(metamap_word2id))
             with open(metamap_path, 'r') as f:
                 for line in f:
