@@ -64,6 +64,8 @@ parser.add_argument("--fc_dim", type=int, default=512, help="nhid of fc layers")
 parser.add_argument("--reload_val", action='store_true', help="Reload the previous best epoch on validation, should be used with tied weights")
 parser.add_argument("--no_stop", default=True, action='store_true', help="no early stopping")
 parser.add_argument("--metamap", default=False, action='store_true', help="use meta map")
+parser.add_argument("--ppmi", default=False, action='store_true', help="use ppmi")
+parser.add_argument("--ppmibias", default=False, action='store_true', help="use ppmi bias")
 # gpu
 parser.add_argument("--gpu_id", type=int, default=0, help="GPU ID")
 parser.add_argument("--seed", type=int, default=1234, help="seed")
@@ -189,7 +191,9 @@ config_dis_model = {
     'cluster_param': [params.cluster_param_a, params.cluster_param_b, params.cluster_param_c],
     'cooccur_param': params.cooccur_param,
     'metamap': params.metamap,
-    'n_metamap': len(json.load(open('/home/yuhuiz/Transformer/data/meta2id.json')))
+    'n_metamap': len(json.load(open('/home/yuhuiz/Transformer/data/meta2id.json'))),
+    'ppmi': params.ppmi,
+    'ppmibias': params.ppmibias
 }
 if params.cur_epochs == 1:
     if params.model_type == "lstm":

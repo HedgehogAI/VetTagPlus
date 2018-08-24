@@ -712,14 +712,13 @@ def pmi(df, positive=True):
 
 class CoOccurenceLoss(nn.Module):
     def __init__(self, config,
-                 ppmi=False,
                  csu_path='./data/csu/label_co_matrix.npy',
                  device=-1
                 ):
         super(CoOccurenceLoss, self).__init__()
         self.config = config
         self.X = np.load(csu_path)
-        self.X = pmi(self.X, positive=ppmi)
+        self.X = pmi(self.X, positive=config['ppmi'])
         triu = np.triu_indices(config['n_classes'], 1)
         self.Y = np.zeros(self.X.shape)
         self.Y[triu] = self.X[triu]
@@ -729,7 +728,12 @@ class CoOccurenceLoss(nn.Module):
     def forward(self, softmax_weight, softmax_bias):
         W1 = softmax_weight.repeat(1, self.config['n_classes']).view(-1, self.config['fc_dim'])
         W2 = softmax_weight.repeat(self.config['n_classes'], 1).view(-1, self.config['fc_dim'])
-        diff = ((W1 - W2) * (W1 - W2)).sum(1).view(self.config['n_classes'], self.config['n_classes'])
+        if self.config['ppmibias']:
+            B1 = softmax_bias.unsqueeze(1).repeat(1, self.config['n_classes']).view(-1, 1)
+            B2 = softmax_bias.unsqueeze(1).repeat(self.config['n_classes'], 1).view(-1, 1)
+            diff = ((W1 - W2) * (W1 - W2) + (B1 - B2) * (B1 - B2)).sum(1).view(self.config['n_classes'], self.config['n_classes'])
+        else:
+            diff = ((W1 - W2) * (W1 - W2)).sum(1).view(self.config['n_classes'], self.config['n_classes'])
         loss = (self.Y * diff).sum()
         return loss * self.config['cooccur_param']
 
