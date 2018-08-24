@@ -278,6 +278,10 @@ CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/transformer_auxil
 
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/transformer_auxiliary_pretrain_bpe_cooccur_1e-3_glove_finetune --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --inputdir exp/bpe/sage_transformer/model-8.pickle --cooccur_param 1e-3
 
+# cooccur_new
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/transformer_auxiliary_pretrain_bpe_cooccur_1e-3_new --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --inputdir exp/bpe/sage_transformer/model-8.pickle --cooccur_param 1e-3
+
 # RENAME
 
 ➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe_no_lmloss lstm

@@ -712,6 +712,30 @@ def pmi(df, positive=True):
 
 class CoOccurenceLoss(nn.Module):
     def __init__(self, config,
+                 ppmi=False,
+                 csu_path='./data/csu/label_co_matrix.npy',
+                 device=-1
+                ):
+        super(CoOccurenceLoss, self).__init__()
+        self.config = config
+        self.X = np.load(csu_path)
+        self.X = pmi(self.X, positive=ppmi)
+        triu = np.triu_indices(config['n_classes'], 1)
+        self.Y = np.zeros(self.X.shape)
+        self.Y[triu] = self.X[triu]
+        self.Y = np.transpose(self.Y, (1, 0))
+        self.Y = Variable(torch.FloatTensor(self.Y), requires_grad=False).cuda(device)
+
+    def forward(self, softmax_weight, softmax_bias):
+        W1 = softmax_weight.repeat(1, self.config['n_classes']).view(-1, self.config['fc_dim'])
+        W2 = softmax_weight.repeat(self.config['n_classes'], 1).view(-1, self.config['fc_dim'])
+        diff = ((W1 - W2) * (W1 - W2)).sum(1).view(self.config['n_classes'], self.config['n_classes'])
+        loss = (self.Y * diff).sum()
+        return loss * self.config['cooccur_param']
+
+
+class CoOccurenceLoss2(nn.Module):
+    def __init__(self, config,
                  use_csu=True,
                  glove=True,
                  xmax=1000,
