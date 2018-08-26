@@ -723,6 +723,9 @@ class CoOccurenceLoss(nn.Module):
         self.Y = np.zeros(self.X.shape)
         self.Y[triu] = self.X[triu]
         self.Y = np.transpose(self.Y, (1, 0))
+        if config['threshold'] != 0.0:
+            self.Y = self.Y * (self.Y > config['threshold'])
+        logging.info(self.Y)
         self.Y = Variable(torch.FloatTensor(self.Y), requires_grad=False).cuda(device)
 
     def forward(self, softmax_weight, softmax_bias):

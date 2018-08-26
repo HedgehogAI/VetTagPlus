@@ -66,6 +66,7 @@ parser.add_argument("--no_stop", default=True, action='store_true', help="no ear
 parser.add_argument("--metamap", default=False, action='store_true', help="use meta map")
 parser.add_argument("--ppmi", default=False, action='store_true', help="use ppmi")
 parser.add_argument("--ppmibias", default=False, action='store_true', help="use ppmi bias")
+parser.add_argument("--threshold", type=float, default=0.0, help="cooccur threshold")
 # gpu
 parser.add_argument("--gpu_id", type=int, default=0, help="GPU ID")
 parser.add_argument("--seed", type=int, default=1234, help="seed")
@@ -193,7 +194,8 @@ config_dis_model = {
     'metamap': params.metamap,
     'n_metamap': len(json.load(open('/home/yuhuiz/Transformer/data/meta2id.json'))),
     'ppmi': params.ppmi,
-    'ppmibias': params.ppmibias
+    'ppmibias': params.ppmibias,
+    'threshold': params.threshold
 }
 if params.cur_epochs == 1:
     if params.model_type == "lstm":
