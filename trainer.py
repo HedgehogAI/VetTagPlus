@@ -435,7 +435,14 @@ if __name__ == '__main__':
     elif params.corpus == 'csu':
         if len(params.inputdir) != 0:
             logger.info('Load Model from %s' % (params.inputdir))
-            dis_net.load_state_dict(torch.load(params.inputdir).state_dict())
+            state_dict = torch.load(params.inputdir).state_dict()
+            # state_dict.pop('classifier.0.weight')
+            # state_dict.pop('classifier.0.bias')
+            # state_dict.pop('projection_layer.linear.weight')
+            # state_dict.pop('projection_layer.linear.bias')
+            # state_dict.pop('projection_layer.linear_out.weight')
+            # state_dict.pop('projection_layer.linear_out.bias')
+            dis_net.load_state_dict(state_dict, strict=False)
         # evaluate_epoch_csu(epoch)
         # evaluate_epoch_csu(epoch, eval_type='test')
         while not stop_training and epoch <= params.n_epochs:

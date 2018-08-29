@@ -3,10 +3,8 @@ import os
 import inspect
 from torch import optim
 import re
-import ftfy
 import json
 import time
-import spacy
 from tqdm import tqdm
 import numpy as np
 
@@ -56,9 +54,7 @@ class TextEncoder(object):
     """
 
     def __init__(self, encoder_path, bpe_path):
-        self.nlp = spacy.load('en', disable=['parser', 'tagger', 'ner', 'textcat'])
         self.encoder = json.load(open(encoder_path))
-        self.decoder = {v: k for k, v in self.encoder.items()}
         merges = open(bpe_path).read().split('\n')[1:-1]
         merges = [tuple(merge.split()) for merge in merges]
         self.bpe_ranks = dict(zip(merges, range(len(merges))))
@@ -111,7 +107,7 @@ class TextEncoder(object):
         # lazy: not using ftfy, SpaCy, or regex. DisSent is processed.
         texts_tokens = []
         for text in texts:
-            text = self.nlp(text_standardize(ftfy.fix_text(text))) if not lazy else text.split()
+            text = text.split()
             text_tokens = []
             for token in text:
                 token_text = token.text if not lazy else token
@@ -153,10 +149,8 @@ def build_vocab(sents, specials):
 
 
 def batchify(data, bsz):
-    print data
     nbatch = data.shape[0] // bsz 
     data = data[:nbatch*bsz].reshape(bsz, nbatch)
-    print data
     return data   
 
 
