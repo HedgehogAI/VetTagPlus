@@ -59,6 +59,7 @@ parser.add_argument("--d_ff", type=int, default=2048, help="decoder nhid dimensi
 parser.add_argument("--d_model", type=int, default=768, help="decoder nhid dimension")
 parser.add_argument("--n_heads", type=int, default=8, help="number of attention heads")
 parser.add_argument("--n_layers", type=int, default=6, help="decoder num layers")
+parser.add_argument("--n_lstm_layers", type=int, default=1, help="decoder num lstm layers")
 parser.add_argument("--fc_dim", type=int, default=512, help="nhid of fc layers")
 # parser.add_argument("--pool_type", type=str, default='max', help="flag if we do max pooling, which hasn't been done before")
 parser.add_argument("--reload_val", action='store_true', help="Reload the previous best epoch on validation, should be used with tied weights")
@@ -195,7 +196,8 @@ config_dis_model = {
     'n_metamap': len(json.load(open('/home/yuhuiz/Transformer/data/meta2id.json'))),
     'ppmi': params.ppmi,
     'ppmibias': params.ppmibias,
-    'threshold': params.threshold
+    'threshold': params.threshold,
+    'n_lstm_layers': params.n_lstm_layers
 }
 if params.cur_epochs == 1:
     if params.model_type == "lstm":
