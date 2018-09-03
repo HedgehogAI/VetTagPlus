@@ -313,12 +313,17 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
     dis_net.eval()
     
     # data without shuffle
-    s1 = valid['s1'] if eval_type == 'valid' else test['s1']
-    target = valid['label'] if eval_type == 'valid' else test['label']
+    if eval_type == 'train':
+        s1, target = train['s1'], train['label']
+    elif eval_type == 'valid':
+        s1, target = valid['s1'], valid['label']
+    else:
+        s1, target = test['s1'], test['label']
     if params.metamap: metamap = valid['metamap'] if eval_type == 'valid' else test['metamap']
     else: metamap = []
     valid_preds, valid_labels = [], []
 
+    # dump=[[],[],[],[]]
     for stidx in range(0, len(s1), params.batch_size):
         # prepare batch
         s1_batch = pad_batch(s1[stidx: stidx + params.batch_size], encoder['_pad_'])
@@ -333,6 +338,12 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
         pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)
         valid_preds.extend(pred.tolist())
         valid_labels.extend(label_batch.tolist())
+        
+        # loss = dis_net.compute_clf_loss(clf_output, b.label)
+        # dump[0].append(u.data.cpu().numpy().tolist())
+        # dump[1].append(b.label.data.cpu().numpy().tolist())
+        # dump[2].append(clf_output.data.cpu().numpy().tolist())
+        # dump[3].append(loss.data.cpu().numpy().tolist())
 
     valid_preds, valid_labels = np.array(valid_preds), np.array(valid_labels)
     if eval_type == 'test': np.save('%s/preds-%s.npy' % (params.outputdir, str(epoch)), valid_preds)
@@ -347,7 +358,7 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
         (round(micro_p, 3), round(macro_p, 3)),
         (round(micro_r, 3), round(macro_r, 3)),
         (round(micro_f1, 3), round(macro_f1, 3))))
-
+    # json.dump(dump, open('dump.json', 'w'))
 
 def train_epoch_sage(epoch):
     logger.info('\nTRAINING : Epoch ' + str(epoch))
@@ -361,7 +372,7 @@ def train_epoch_sage(epoch):
         pad_end = np.ones([params.batch_size, 1]) * encoder['_end_']
         s1_batch = np.concatenate([pad_start, s1[:, stidx: stidx + params.bptt_size], pad_end], 1).astype(np.int64)
         label_batch = np.ones(params.batch_size)
-        b = Batch(s1_batch, label_batch, encoder['_pad_'], gpu_id=params.gpu_id)
+        b = Batch(s1_batch, label_batch, [], encoder['_pad_'], gpu_id=params.gpu_id)
 
         # model forward
         s1_y_hat = dis_net(b, clf=False, lm=True)
@@ -406,7 +417,7 @@ def evaluate_epoch_sage(epoch, eval_type='valid'):
         pad_end = np.ones([s1.shape[0], 1]) * encoder['_end_']
         s1_batch = np.concatenate([pad_start, s1[:, stidx: stidx + params.bptt_size], pad_end], 1).astype(np.int64)
         label_batch = np.ones(s1.shape[0])
-        b = Batch(s1_batch, label_batch, encoder['_pad_'], gpu_id=params.gpu_id)
+        b = Batch(s1_batch, label_batch, [], encoder['_pad_'], gpu_id=params.gpu_id)
 
         # model forward
         s1_y_hat = dis_net(b, clf=False, lm=True)
@@ -433,7 +444,10 @@ if __name__ == '__main__':
     # elif params.corpus == 'csu':
     #     del dis_net
     #     dis_net = torch.load(params.inputdir)
-    #     evaluate_epoch_csu(epoch, eval_type='test')
+    #     dis_net.config = config_dis_model
+    #     valuate_epoch_csu(epoch, eval_type='test')
+    #     evaluate_epoch_csu(epoch, eval_type='valid')
+    #     evaluate_epoch_csu(epoch, eval_type='train')
     elif params.corpus == 'csu':
         if len(params.inputdir) != 0:
             logger.info('Load Model from %s' % (params.inputdir))

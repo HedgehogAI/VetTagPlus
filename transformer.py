@@ -183,6 +183,8 @@ class DisSentT(nn.Module):
         if lm:
             s1_y = self.generator(u_h)
         
+        # if hidden:
+        #     return clf_output, u
         if clf and lm:
             return clf_output, s1_y
         elif clf:   

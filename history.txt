@@ -345,7 +345,29 @@ CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/hloss/transformer_auxil
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/transformer_auxiliary_pretrain_bpe_cooccur_1e-4_ppmi_seed2 --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 4 --model_type transformer --cut_down_len 600 --train_emb --inputdir exp/bpe/sage_transformer/model-8.pickle --cooccur_param 1e-4 --ppmi --seed 2345
 
 CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/transformer_noproj_seed --corpus csu --hypes hypes/csu.json --batch_size 5 --proj_head 1 --model_type transformer --cut_down_len 600 --train_emb --lm_coef 0.0 --seed 2345
+
+# 0902
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/hloss/lstm_layer2 --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0 --n_lstm_layers 2
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/hloss/lstm_layer4 --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0 --n_lstm_layers 4
+
+<#> CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/lstm_auxiliary_layer2 --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --n_lstm_layers 2
+
+CUDA_VISIBLE_DEVICES=3 python trainer.py --outputdir exp/hloss/lstm_auxiliary_layer4 --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 4 --model_type lstm --cut_down_len 600 --train_emb --n_lstm_layers 4
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/bpe/sage_lstm_layer4 --corpus sage --hypes hypes/sage.json --batch_size 10 --bptt_size 600 --proj_head 4 --model_type lstm --train_emb --n_lstm_layers 4
+
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/hloss/lsmt_noproj --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 1 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0
+
+CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/lsmt_noproj_seed --corpus csu --hypes hypes/csu.json --batch_size 10 --proj_head 1 --model_type lstm --cut_down_len 600 --train_emb --lm_coef 0.0 --seed 2345
+
+# 0902
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/analysis/pp --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/bpe/transformer_auxiliary_pretrain/model-8.pickle
+
+
 # RENAME
+
 
 ➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe_no_lmloss lstm
 ➜  bpe git:(master) ✗ mv csu_lstm_cut600_bpe lstm_auxiliary

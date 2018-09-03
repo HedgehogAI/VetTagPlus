@@ -7,6 +7,9 @@ exp/
 .*
 data/
 interpret/
+abstention/
+*.png
+*.pdf
 # User-specific stuff:
 .idea/**/workspace.xml
 .idea/**/tasks.xml
