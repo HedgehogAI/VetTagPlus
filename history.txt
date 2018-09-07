@@ -365,7 +365,8 @@ CUDA_VISIBLE_DEVICES=2 python trainer.py --outputdir exp/hloss/lsmt_noproj_seed 
 # 0902
 CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/analysis/pp --corpus pp --hypes hypes/pp.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/bpe/transformer_auxiliary_pretrain/model-8.pickle
 
-
+# 0906
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/analysis/pp --corpus pp --hypes hypes/sage_test.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/bpe/transformer_auxiliary_pretrain/model-8.pickle
 # RENAME
 
 

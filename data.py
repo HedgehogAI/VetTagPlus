@@ -122,7 +122,8 @@ def get_dis(data_dir, prefix, discourse_tag, cut_down_len, metamap=False):
                     multi_label = np.zeros(len(dis_map), dtype='float32')
                     if len(columns) == 2:
                         for number in map(int, columns[1].split()):
-                            multi_label[number] = 1
+                            if number < len(dis_map):
+                                multi_label[number] = 1
                     target[data_type].append(multi_label)
                 else:
                     target[data_type].append(0) # No label

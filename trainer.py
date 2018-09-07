@@ -440,6 +440,7 @@ if __name__ == '__main__':
     if params.corpus == 'pp':
         del dis_net
         dis_net = torch.load(params.inputdir)
+        dis_net.config = config_dis_model
         evaluate_epoch_csu(epoch, eval_type='test')
     # elif params.corpus == 'csu':
     #     del dis_net
