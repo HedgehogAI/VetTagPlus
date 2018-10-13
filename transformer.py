@@ -328,6 +328,31 @@ class MetamapModel(nn.Module):
         return self.bce_loss(logits, labels).mean()
 
 
+class CAMLModel(nn.Module):
+    def __init__(self, config, embed):
+        super(CAMLModel, self).__init__()
+        self.classifier = nn.Linear(config['n_metamap'], config['n_classes'])
+        self.bce_loss = nn.BCEWithLogitsLoss()
+        self.conv = nn.Conv1d(config['d_model'], config['n_kernels'], kernel_size=config['kernel_size'], padding=config['kernel_size'] / 2) # <YUHUI> bug: ksize is odd
+        self.U = nn.Linear(config['n_kernels'], config['n_classes'])
+        self.final = nn.Linear(config['n_kernels'], config['n_classes'])
+        self.embed = embed 
+        self.embed_drop = nn.Dropout(p=config['dpout']) # 0.5
+
+    def forward(self, batch):
+        x = self.embed(batch.s1)
+        x = self.embed_drop(x)
+        x = x.transpose(1, 2)
+        x = F.tanh(self.conv(x).transpose(1, 2))
+        alpha = F.softmax(self.U.weight.matmul(x.transpose(1, 2)), dim=2)
+        m = alpha.matmul(x)
+        y = self.final.weight.mul(m).sum(dim=2).add(self.final.bias)
+        return y
+
+    def compute_clf_loss(self, logits, labels):
+        return self.bce_loss(logits, labels).mean()
+
+
 def make_model(encoder, config, word_embeddings=None):
     # encoder: dictionary, for vocab
     "Helper: Construct a model from hyperparameters."
@@ -401,6 +426,20 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
         if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
+        if p.dim() > 1 and p.requires_grad is True:
+            nn.init.xavier_uniform(p)
+    logging.info(model.tgt_embed[0].lut.weight.data.norm())
+    return model
+
+
+def make_caml_model(encoder, config, word_embeddings=None):
+    tgt_embed = Embeddings(encoder, config, word_embeddings)
+    model = CAMLModel(
+        config,
+        tgt_embed,
+    )
+    for p in model.parameters():
+        # we won't update anything that has fixed parameters!
         if p.dim() > 1 and p.requires_grad is True:
             nn.init.xavier_uniform(p)
     logging.info(model.tgt_embed[0].lut.weight.data.norm())

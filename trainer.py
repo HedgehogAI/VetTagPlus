@@ -13,7 +13,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 from data import get_dis, pad_batch, Batch
 from util import get_labels, TextEncoder, batchify
-from transformer import NoamOpt, make_model, make_lstm_model, make_metamap_model
+from transformer import NoamOpt, make_model, make_lstm_model, make_metamap_model, make_caml_model
 import logging
 from sklearn import metrics
 
@@ -47,7 +47,7 @@ parser.add_argument("--pick_hid", default=True, action='store_true', help="Pick 
 parser.add_argument("--tied", default=True, action='store_true', help="Tie weights to embedding, should be always flagged True")
 parser.add_argument("--proj_head", type=int, default=1, help="last docoder layer head number")
 parser.add_argument("--proj_type", type=int, default=1, help="last decoder layer blow up type, 1 for initial linear transformation, 2 for final linear transformation")
-parser.add_argument("--model_type", type=str, default="transformer", help="transformer|lstm")
+parser.add_argument("--model_type", type=str, default="transformer", help="transformer|lstm|caml")
 parser.add_argument("--meta_param", type=float, default=0.0, help="meta param")
 parser.add_argument("--cluster_param_a", type=float, default=0.0, help="cluster param a")
 parser.add_argument("--cluster_param_b", type=float, default=0.0, help="cluster param b")
@@ -60,6 +60,8 @@ parser.add_argument("--d_model", type=int, default=768, help="decoder nhid dimen
 parser.add_argument("--n_heads", type=int, default=8, help="number of attention heads")
 parser.add_argument("--n_layers", type=int, default=6, help="decoder num layers")
 parser.add_argument("--n_lstm_layers", type=int, default=1, help="decoder num lstm layers")
+parser.add_argument("--n_kernels", type=int, default=50, help="caml kernel number")
+parser.add_argument("--kernel_size", type=int, default=4, help="caml kernel size")
 parser.add_argument("--fc_dim", type=int, default=512, help="nhid of fc layers")
 # parser.add_argument("--pool_type", type=str, default='max', help="flag if we do max pooling, which hasn't been done before")
 parser.add_argument("--reload_val", action='store_true', help="Reload the previous best epoch on validation, should be used with tied weights")
@@ -203,6 +205,9 @@ if params.cur_epochs == 1:
     if params.model_type == "lstm":
         logger.info('model lstm')
         dis_net = make_lstm_model(encoder, config_dis_model, word_embeddings) # ctx_embeddings
+    elif params.model_type == 'caml':
+        logger.info('model caml')
+        dis_net = make_caml_model(encoder, config_dis_model, word_embeddings)
     else:
         logger.info('model transformer')
         dis_net = make_model(encoder, config_dis_model, word_embeddings)
