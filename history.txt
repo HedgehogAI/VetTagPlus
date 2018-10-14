@@ -371,6 +371,12 @@ CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/analysis/pp --corpus pp
 # 1014
 CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/bpe/caml --corpus csu --hypes hypes/csu.json --batch_size 16 --model_type caml --cut_down_len 600 --train_emb --lm_coef 0.0 --d_model 100 --dpout 0.5
 
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/bpe/caml-768 --corpus csu --hypes hypes/csu.json --batch_size 16 --model_type caml --cut_down_len 600 --train_emb --lm_coef 0.0 --d_model 768 --n_kernels 384 --dpout 0.5
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/bpe/caml-768-init-emb --corpus csu --hypes hypes/csu_word2vec_bpe.json --batch_size 16 --model_type caml --cut_down_len 600 --train_emb --lm_coef 0.0 --d_model 768 --n_kernels 384 --dpout 0.5 --init_emb
+
+CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/bpe/cnn-768-init-emb --corpus csu --hypes hypes/csu_word2vec_bpe.json --batch_size 16 --model_type caml --cut_down_len 600 --train_emb --lm_coef 0.0 --d_model 768 --n_kernels 384 --dpout 0.5 --init_emb
+
 
 # RENAME
 
