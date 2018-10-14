@@ -329,18 +329,18 @@ class MetamapModel(nn.Module):
 
 
 class CAMLModel(nn.Module):
-    def __init__(self, config, embed):
+    def __init__(self, config, tgt_embed):
         super(CAMLModel, self).__init__()
         self.classifier = nn.Linear(config['n_metamap'], config['n_classes'])
         self.bce_loss = nn.BCEWithLogitsLoss()
         self.conv = nn.Conv1d(config['d_model'], config['n_kernels'], kernel_size=config['kernel_size'], padding=config['kernel_size'] / 2) # <YUHUI> bug: ksize is odd
         self.U = nn.Linear(config['n_kernels'], config['n_classes'])
         self.final = nn.Linear(config['n_kernels'], config['n_classes'])
-        self.embed = embed 
+        self.tgt_embed = tgt_embed 
         self.embed_drop = nn.Dropout(p=config['dpout']) # 0.5
 
-    def forward(self, batch):
-        x = self.embed(batch.s1)
+    def forward(self, batch, clf=True, lm=False):
+        x = self.tgt_embed(batch.s1)
         x = self.embed_drop(x)
         x = x.transpose(1, 2)
         x = F.tanh(self.conv(x).transpose(1, 2))
@@ -351,6 +351,30 @@ class CAMLModel(nn.Module):
 
     def compute_clf_loss(self, logits, labels):
         return self.bce_loss(logits, labels).mean()
+
+class CNNModel(nn.Module):
+    def __init__(self, config, tgt_embed):
+        super(CNNModel, self).__init__()
+        self.classifier = nn.Linear(config['n_metamap'], config['n_classes'])
+        self.bce_loss = nn.BCEWithLogitsLoss()
+        self.conv = nn.Conv1d(config['d_model'], config['n_kernels'], kernel_size=config['kernel_size'], padding=config['kernel_size'] / 2) # <YUHUI> bug: ksize is odd
+        self.fc = nn.Linear(config['n_kernels'], config['n_classes'])
+        self.tgt_embed = tgt_embed 
+        self.embed_drop = nn.Dropout(p=config['dpout']) # 0.5
+
+    def forward(self, batch, clf=True, lm=False):
+        x = self.tgt_embed(batch.s1)
+        x = self.embed_drop(x)
+        x = x.transpose(1, 2)
+        c = self.conv(x)
+        x = F.max_pool1d(F.tanh(c), kernel_size=c.size()[2])
+        x = x.squeeze(dim=2)
+        y = self.fc(x)
+        return y
+
+    def compute_clf_loss(self, logits, labels):
+        return self.bce_loss(logits, labels).mean()
+
 
 
 def make_model(encoder, config, word_embeddings=None):
@@ -433,7 +457,8 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
 
 
 def make_caml_model(encoder, config, word_embeddings=None):
-    tgt_embed = Embeddings(encoder, config, word_embeddings)
+    tgt_embed = nn.Sequential(Embeddings(encoder, config, word_embeddings))
+    tgt_embed.d_model = 1
     model = CAMLModel(
         config,
         tgt_embed,
@@ -441,6 +466,7 @@ def make_caml_model(encoder, config, word_embeddings=None):
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
         if p.dim() > 1 and p.requires_grad is True:
+            if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
             nn.init.xavier_uniform(p)
     logging.info(model.tgt_embed[0].lut.weight.data.norm())
     return model

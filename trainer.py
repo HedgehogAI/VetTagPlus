@@ -199,7 +199,9 @@ config_dis_model = {
     'ppmi': params.ppmi,
     'ppmibias': params.ppmibias,
     'threshold': params.threshold,
-    'n_lstm_layers': params.n_lstm_layers
+    'n_lstm_layers': params.n_lstm_layers,
+    'n_kernels': params.n_kernels,
+    'kernel_size': params.kernel_size
 }
 if params.cur_epochs == 1:
     if params.model_type == "lstm":
