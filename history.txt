@@ -367,6 +367,11 @@ CUDA_VISIBLE_DEVICES=1 python trainer.py --outputdir exp/analysis/pp --corpus pp
 
 # 0906
 CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/analysis/pp --corpus pp --hypes hypes/sage_test.json --batch_size 10 --proj_head 4 --cut_down_len 600 --inputdir exp/bpe/transformer_auxiliary_pretrain/model-8.pickle
+
+# 1014
+CUDA_VISIBLE_DEVICES=0 python trainer.py --outputdir exp/bpe/caml --corpus csu --hypes hypes/csu.json --batch_size 16 --model_type caml --cut_down_len 600 --train_emb --lm_coef 0.0 --d_model 100 --dpout 0.5
+
+
 # RENAME
 
 
