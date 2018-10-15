@@ -114,9 +114,10 @@ class DisSentT(nn.Module):
         self.config = config
 
         self.classifier = nn.Sequential(
-            nn.Linear(config['d_model'] * config['proj_head'], config['fc_dim']),
-            nn.Linear(2 * config['fc_dim'] if config['metamap'] else config['fc_dim'], config['fc_dim']),
-            nn.Linear(config['fc_dim'], config['n_classes'])
+            # nn.Linear(config['d_model'] * config['proj_head'], config['fc_dim']),
+            # nn.Linear(2 * config['fc_dim'] if config['metamap'] else config['fc_dim'], config['fc_dim']),
+            # nn.Linear(config['fc_dim'], config['n_classes'])
+            nn.Linear(config['d_model'] * config['proj_head'], config['n_classes'])
         )
 
         if config['metamap']:

@@ -167,7 +167,8 @@ if params.init_emb:
 else:                                                          
     word_embeddings = (np.random.randn(len(encoder), params.d_model) * 0.02).astype(np.float32)
 dis_labels = get_labels('csu')
-label_size = len(dis_labels)
+#label_size = len(dis_labels)
+label_size = 4577 # <Yuhui> ugly for fine grained
 
 """
 MODEL
@@ -460,12 +461,16 @@ if __name__ == '__main__':
         if len(params.inputdir) != 0:
             logger.info('Load Model from %s' % (params.inputdir))
             state_dict = torch.load(params.inputdir).state_dict()
-            # state_dict.pop('classifier.0.weight')
-            # state_dict.pop('classifier.0.bias')
-            # state_dict.pop('projection_layer.linear.weight')
-            # state_dict.pop('projection_layer.linear.bias')
-            # state_dict.pop('projection_layer.linear_out.weight')
-            # state_dict.pop('projection_layer.linear_out.bias')
+            state_dict.pop('classifier.0.weight')
+            state_dict.pop('classifier.0.bias')
+            state_dict.pop('classifier.1.weight')
+            state_dict.pop('classifier.1.bias')
+            state_dict.pop('classifier.2.weight')
+            state_dict.pop('classifier.2.bias')
+            state_dict.pop('projection_layer.linear.weight')
+            state_dict.pop('projection_layer.linear.bias')
+            state_dict.pop('projection_layer.linear_out.weight')
+            state_dict.pop('projection_layer.linear_out.bias')
             dis_net.load_state_dict(state_dict, strict=False)
         # evaluate_epoch_csu(epoch)
         # evaluate_epoch_csu(epoch, eval_type='test')

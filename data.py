@@ -119,7 +119,7 @@ def get_dis(data_dir, prefix, discourse_tag, cut_down_len, metamap=False):
                 if len(columns[0].split()) > cut_down_len: columns[0] = ' '.join([token for token in columns[0].split()[:cut_down_len]]) #<TODO>:remove
                 s1[data_type].append(columns[0].lower()) # Lower
                 if discourse_tag == 'csu' or discourse_tag == 'pp':
-                    multi_label = np.zeros(len(dis_map), dtype='float32')
+                    multi_label = np.zeros(4577, dtype='float32') # <YUHUI> ugly, len(dismap)
                     if len(columns) == 2:
                         for number in map(int, columns[1].split()):
                             if number < len(dis_map):
