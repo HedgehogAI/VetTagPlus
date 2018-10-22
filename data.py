@@ -27,7 +27,7 @@ def pad_batch(batch, pad_id):
     # just build a numpy array that's padded
 
     lengths = np.array([len(x) for x in batch])
-    max_len = np.max(lengths)
+    max_len = 602 #np.max(lengths)
     padded_batch = np.full((len(batch), max_len), pad_id)  # fill in pad_id
 
     for i in range(len(batch)):
@@ -116,14 +116,13 @@ def get_dis(data_dir, prefix, discourse_tag, cut_down_len, metamap=False):
         with open(text_path, 'r') as f:
             for line in f:
                 columns = line.strip().split('\t')
-                if len(columns[0].split()) > cut_down_len: columns[0] = ' '.join([token for token in columns[0].split()[:cut_down_len]]) #<TODO>:remove
+                if len(columns[0].split()) > cut_down_len: columns[0] = ' '.join(columns[0].split()[:cut_down_len]) #<TODO>:remove
                 s1[data_type].append(columns[0].lower()) # Lower
                 if discourse_tag == 'csu' or discourse_tag == 'pp':
                     multi_label = np.zeros(4577, dtype='float32') # <YUHUI> ugly, len(dismap)
                     if len(columns) == 2:
                         for number in map(int, columns[1].split()):
-                            if number < len(dis_map):
-                                multi_label[number] = 1
+                            multi_label[number] = 1
                     target[data_type].append(multi_label)
                 else:
                     target[data_type].append(0) # No label

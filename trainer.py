@@ -271,6 +271,7 @@ def train_epoch_csu(epoch):
             micro_p, micro_r, micro_f1 = np.average(p, weights=s), np.average(r, weights=s), np.average(f1, weights=s)
             macro_p, macro_r, macro_f1 = np.average(p[p.nonzero()]), np.average(r[r.nonzero()]), np.average(f1[f1.nonzero()])
         except:
+            print 'exception'
             continue
         all_em.append(em)
         all_micro_p.append(micro_p)
