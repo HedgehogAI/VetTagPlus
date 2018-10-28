@@ -120,6 +120,7 @@ def get_dis(data_dir, prefix, discourse_tag, cut_down_len, metamap=False):
                 s1[data_type].append(columns[0].lower()) # Lower
                 if discourse_tag == 'csu' or discourse_tag == 'pp':
                     multi_label = np.zeros(4577, dtype='float32') # <YUHUI> ugly, len(dismap)
+                    # multi_label = np.zeros(len(dis_map), dtype='float32')
                     if len(columns) == 2:
                         for number in map(int, columns[1].split()):
                             multi_label[number] = 1
