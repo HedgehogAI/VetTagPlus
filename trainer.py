@@ -1,19 +1,12 @@
 import os
 import sys
-import csv
-import time
 import json
 import argparse
-from os.path import join as pjoin
-from itertools import izip
 import numpy as np
 import random
 import torch
-from torch.autograd import Variable
-import torch.nn as nn
-from data import get_data, pad_batch, Batch
-from util import get_labels, batchify
-from transformer import NoamOpt, make_model, make_lstm_model, make_metamap_model, make_caml_model
+from data import get_data, pad_batch, batchify, Batch
+from transformer import NoamOpt, make_transformer_model, make_lstm_model, make_caml_model
 import logging
 from sklearn import metrics
 
@@ -79,7 +72,8 @@ Default json file loading
 json_config = json.load(open(params.hypes))
 data_dir = json_config['data_dir']
 prefix = json_config[params.corpus]
-encoder_path = json_config['bpe_encoder_path']
+encoder_path = json_config['encoder_path']
+label_size = json_config['label_size'] # 42, 4577 if not finegrained
 if params.init_emb: wordvec_path = json_config['wordvec_path']
 
 """
@@ -95,7 +89,7 @@ n_special = 4
 """
 DATA
 """
-train, valid, test = get_data(encoder, data_dir, prefix, params.corpus, params.cut_down_len) 
+train, valid, test = get_data(encoder, data_dir, prefix, params.corpus, params.cut_down_len, label_size) 
 max_len = 0.
 if params.corpus == 'sage':
     train['text'] = batchify(np.array(train['text'][0]), params.batch_size)
@@ -111,7 +105,7 @@ if params.init_emb:
                                       (np.random.randn(n_special - 1, params.d_model) * 0.02).astype(np.float32)], 0)
 else:                                                          
     word_embeddings = (np.random.randn(len(encoder), params.d_model) * 0.02).astype(np.float32)
-label_size = 4577 # <TODO> 42 if not finegrained
+
 
 """
 MODEL
@@ -143,7 +137,7 @@ elif params.model_type == 'caml':
     model = make_caml_model(encoder, config_model, word_embeddings)
 else:
     logger.info('model transformer')
-    model = make_model(encoder, config_model, word_embeddings)
+    model = make_transformer_model(encoder, config_model, word_embeddings)
 logger.info(model)
 need_grad = lambda x: x.requires_grad
 model_opt = NoamOpt(params.d_model, params.factor, params.warmup_steps, torch.optim.Adam(filter(need_grad, model.parameters()), lr=0, betas=(0.9, 0.98), eps=1e-9))

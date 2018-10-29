@@ -5,8 +5,13 @@ from torch.autograd import Variable
 import logging
 from collections import defaultdict
 from os.path import join as pjoin
-from util import get_labels
 import json
+
+
+def batchify(data, bsz):
+    nbatch = data.shape[0] // bsz 
+    data = data[:nbatch*bsz].reshape(bsz, nbatch)
+    return data  
 
 
 def embed_batch(batch, word_embeddings, ctx_embeddings, n_embeds=768):
@@ -54,7 +59,16 @@ class Batch:
         self.text_y = np_to_var(text[:, 1:]).cuda()
         self.text_lengths = (text[:, :-1] != pad_id).sum(axis=1) # <TODO> cuda or not 
         self.text_loss_mask = (self.text_y != pad_id).type(torch.float).cuda()
+        self.text_mask = self.make_std_mask(self.text, pad_id)
         self.label = np_to_var(label).cuda()
+
+    @staticmethod
+    def make_std_mask(tgt, pad_id):
+        "Create a mask to hide padding and future words."
+        tgt_mask = (tgt != pad_id).unsqueeze(-2)
+        tgt_mask = tgt_mask & Variable(subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
+        return tgt_mask
+
 
 def list_to_map(dis_label):
     dis_map = {}
@@ -63,11 +77,10 @@ def list_to_map(dis_label):
     return dis_map
 
 
-def get_data(encoder, data_dir, prefix, cut_down_len):
+def get_data(encoder, data_dir, prefix, cut_down_len, label_size):
     # we are not padding anything in here, this is just repeating
     text = {}
     label = {}
-    label_size = 4577 # <TODO> 42 if not fine-grained
 
     for data_type in ['train', 'valid', 'test']:
         text[data_type], label[data_type] = [], []

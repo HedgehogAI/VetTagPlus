@@ -1,6 +1,6 @@
 {
   "data_dir": "/home/yuhuiz/Transformer/data/sage/sage/",
-  "bpe_encoder_path": "/home/yuhuiz/Transformer/data/sage/word2vec/word2id.json",
-  "bpe_vocab_path": "/home/yuhuiz/Transformer/data/sage/vocab_50000.bpe",
-  "sage": "sage_ascii_oneline"
+  "encoder_path": "/home/yuhuiz/Transformer/data/sage/word2vec/word2id.json",
+  "sage": "sage_ascii_oneline",
+  "label_size": 42
 }
