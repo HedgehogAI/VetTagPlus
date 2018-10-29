@@ -1,7 +1,0 @@
-{
-  "glove_path": "/home/anie/glove/glove.840B.300d.txt",
-  "data_dir": "/home/anie/DisExtract/data/wikitext",
-  "books_5": "discourse_EN_FIVE_and_because_but_if_when_2018mar19",
-  "books_8": "discourse_EN_EIGHT_and_because_but_if_when_so_though_before_2018mar19",
-  "books_all": "discourse_EN_ALL_after_also_although_and_as_because_before_but_if_so_still_then_though_when_while_2018mar19"
-}

@@ -1,7 +1,0 @@
-{
-  "glove_path": "/home/anie/glove/glove.840B.300d.txt",
-  "data_dir": "/home/anie/DisExtract/data/pdtbs",
-  "books_5": "discourse_EN_FIVE_pdtb_2018mar12",
-  "books_8": "discourse_EN_EIGHT_pdtb_2018mar12",
-  "books_all": "discourse_EN_ALL_15_pdtb_2018mar12"
-}

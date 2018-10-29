@@ -1,6 +1,0 @@
-{
-  "data_dir": "/home/yuhuiz/Transformer/data/wikitext-103/",
-  "bpe_encoder_path": "/home/yuhuiz/Transformer/data/wikitext-103/word2id.json",
-  "bpe_vocab_path": "/home/yuhuiz/ClinicalData/src/csu/data/csu/sage_for_lm/vocab_50000.bpe",
-  "sage": "wiki_ascii_oneline"
-}
