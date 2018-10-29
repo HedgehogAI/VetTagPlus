@@ -196,8 +196,8 @@ class PositionalEncoding(nn.Module):
 
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, config['d_model'])
-        position = torch.arange(0, max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, config['d_model'], 2) *
+        position = torch.arange(0., max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0., config['d_model'], 2) *
                              -(math.log(10000.0) / config['d_model']))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
@@ -253,7 +253,7 @@ class Transformer(nn.Module):
         self.generator = generator
         self.config = config
 
-        self.classifier = nn.Linear(config['d_model'], config['n_classes'])
+        self.classifier = nn.Linear(config['d_model'], config['n_classes'])#, dropout=config['dpout'])
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
         self.bce_loss = nn.BCEWithLogitsLoss()
 
@@ -276,7 +276,7 @@ class Transformer(nn.Module):
         u_h = self.encode(batch.text, batch.text_mask)
         if clf:
             # u_h, v_h: (batch_size, time_step, d_model) (which is n_embed)
-            if self.config['pick_hid']: u = self.pick_h(u_h, batch.s1_lengths)
+            if self.config['pick_hid']: u = self.pick_h(u_h, batch.text_lengths)
             else: u = u_h[:, -1, :] # last hidden state
             clf_output = self.classifier(u)
             ret.append(clf_output)

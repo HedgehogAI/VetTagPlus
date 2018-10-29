@@ -28,12 +28,13 @@ def embed_batch(batch, word_embeddings, ctx_embeddings, n_embeds=768):
     return torch.from_numpy(embed).float(), lengths
 
 
-def pad_batch(batch, encoder, pad_start_end=True, max_len=600):
+def pad_batch(batch, encoder, pad_start_end=True):
     # just build a numpy array that's padded
+    max_len = -1
     if pad_start_end:
         for i in range(len(batch)):
             batch[i] = [encoder['_start_']] + batch[i] + [encoder['_end_']]
-        max_len += 2
+            max_len = max(max_len, len(batch[i]))
     padded_batch = np.full((len(batch), max_len), encoder['_pad_'])  # fill in pad_id
     for i in range(len(batch)):
         for j in range(len(batch[i])):
@@ -97,6 +98,7 @@ def get_data(encoder, data_dir, prefix, cut_down_len, label_size):
                         multi_label[number] = 1
                 label[data_type].append(multi_label)
         assert len(text[data_type]) == len(label[data_type])
+        text[data_type] = np.array(text[data_type])
         label[data_type] = np.array(label[data_type])
         logging.info('** {0} DATA : Found {1} pairs of {2} sentences.'.format(data_type.upper(), len(text[data_type]), data_type))
 

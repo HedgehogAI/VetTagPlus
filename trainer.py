@@ -89,7 +89,7 @@ n_special = 4
 """
 DATA
 """
-train, valid, test = get_data(encoder, data_dir, prefix, params.corpus, params.cut_down_len, label_size) 
+train, valid, test = get_data(encoder, data_dir, prefix, params.cut_down_len, label_size) 
 max_len = 0.
 if params.corpus == 'sage':
     train['text'] = batchify(np.array(train['text'][0]), params.batch_size)
@@ -117,8 +117,6 @@ config_model = {
     'd_ff': params.d_ff, # this is the bottleneck blowup dimension
     'n_layers': params.n_layers,
     'dpout': params.dpout,
-    'dpout_fc': params.dpout_fc,
-    'fc_dim': params.fc_dim,
     'bsize': params.batch_size,
     'n_classes': label_size,
     'n_heads': params.n_heads,
@@ -182,7 +180,7 @@ def train_epoch_csu(epoch):
         text_lm_loss = model.compute_lm_loss(text_y_hat, b.text_y, b.text_loss_mask)
         loss = clf_loss + params.lm_coef * text_lm_loss
 
-        all_costs.append(loss.data.item().cpu()) # <TODO> ?
+        all_costs.append(loss.data.item())
         
         # backward
         model_opt.optimizer.zero_grad()
