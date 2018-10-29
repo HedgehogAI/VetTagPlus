@@ -164,7 +164,8 @@ def train_epoch_csu(epoch):
         b = Batch(text_batch, label_batch, encoder['_pad_'])
 
         # model forward
-        clf_output, text_y_hat = model(b, clf=True, lm=True)
+        if params.lm_coef == 0.: clf_output = model(b, clf=True, lm=False)
+        else: clf_output, text_y_hat = model(b, clf=True, lm=True)
 
         # evaluation
         pred = (torch.sigmoid(clf_output) > 0.5).data.cpu().numpy().astype(float)
@@ -176,9 +177,10 @@ def train_epoch_csu(epoch):
         all_r.append(r)
         all_f1.append(f1)
  
-        clf_loss = model.compute_clf_loss(clf_output, b.label)
-        text_lm_loss = model.compute_lm_loss(text_y_hat, b.text_y, b.text_loss_mask)
-        loss = clf_loss + params.lm_coef * text_lm_loss
+        loss = model.compute_clf_loss(clf_output, b.label)
+        if params.lm_coef != 0.0:
+            lm_loss = model.compute_lm_loss(text_y_hat, b.text_y, b.text_loss_mask)
+            loss = params.lm_coef * lm_loss
 
         all_costs.append(loss.data.item())
         
