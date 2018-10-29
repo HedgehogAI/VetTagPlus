@@ -23,17 +23,16 @@ def embed_batch(batch, word_embeddings, ctx_embeddings, n_embeds=768):
     return torch.from_numpy(embed).float(), lengths
 
 
-def pad_batch(batch, pad_id):
+def pad_batch(batch, encoder, pad_start_end=True, max_len=600):
     # just build a numpy array that's padded
-
-    lengths = np.array([len(x) for x in batch])
-    max_len = 602 #np.max(lengths)
-    padded_batch = np.full((len(batch), max_len), pad_id)  # fill in pad_id
-
+    if pad_start_end:
+        for i in range(len(batch)):
+            batch[i] = [encoder['_start_']] + batch[i] + [encoder['_end_']]
+        max_len += 2
+    padded_batch = np.full((len(batch), max_len), encoder['_pad_'])  # fill in pad_id
     for i in range(len(batch)):
         for j in range(len(batch[i])):
             padded_batch[i, j] = batch[i][j]
-
     return padded_batch
 
 
@@ -44,55 +43,18 @@ def subsequent_mask(size):
     return torch.from_numpy(subsequent_mask) == 0
 
 
-# TODO: Maybe we need to tune dtype but right now it's fine...
-def np_to_var(np_obj, gpu_id=-1, requires_grad=False):
-    if gpu_id == -1:
-        return Variable(torch.from_numpy(np_obj), requires_grad=requires_grad)
-    else:
-        return Variable(torch.from_numpy(np_obj), requires_grad=requires_grad).cuda(gpu_id)
-
-def to_cuda(obj, gpu_id):
-    if gpu_id == -1:
-        return obj
-    else:
-        return obj.cuda(gpu_id)
-
-def frequent_encoding(s, vocab_size=57235): # <TODO>
-    all = []
-    for item in s:
-        one = [0 for _ in range(vocab_size)]
-        for number in item:
-            one[number] += 1
-        all.append(one)
-    return np.array(all, dtype=np.float32)
+def np_to_var(np_obj, requires_grad=False):
+    return Variable(torch.from_numpy(np_obj), requires_grad=requires_grad)
 
 
 class Batch:
     "Object for holding a batch of data with mask during training."
-    def __init__(self, s1, label, metamap, pad_id, gpu_id=-1):
-        # require everything passed in to be in Numpy!
-        # also none of them is in GPU! we can use data here to pick out correct
-        # last hidden states
-
-        self.s1_lengths = (s1[:, :-1] != pad_id).sum(axis=1)
-        self.s1 = np_to_var(s1[:, :-1], gpu_id)
-        self.s1_y = np_to_var(s1[:, 1:], gpu_id)
-        self.s1_mask = self.make_std_mask(self.s1, pad_id)
-        # this is total number of tokens
-        self.s1_ntokens = (self.s1_y != pad_id).data.sum()  # used for loss computing
-        self.s1_loss_mask = to_cuda((self.s1_y != pad_id).type(torch.float), gpu_id)  # need to mask loss
-
-        self.label = np_to_var(label, gpu_id)
-        self.metamap = np_to_var(frequent_encoding(metamap), gpu_id) if len(metamap) != 0 else None
-
-    @staticmethod
-    def make_std_mask(tgt, pad_id):
-        "Create a mask to hide padding and future words."
-        tgt_mask = (tgt != pad_id).unsqueeze(-2)
-        tgt_mask = tgt_mask & Variable(
-            subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
-        return tgt_mask
-
+    def __init__(self, text, label, pad_id):
+        self.text = np_to_var(text[:, :-1]).cuda()
+        self.text_y = np_to_var(text[:, 1:]).cuda()
+        self.text_lengths = (text[:, :-1] != pad_id).sum(axis=1) # <TODO> cuda or not 
+        self.text_loss_mask = (self.text_y != pad_id).type(torch.float).cuda()
+        self.label = np_to_var(label).cuda()
 
 def list_to_map(dis_label):
     dis_map = {}
@@ -101,52 +63,31 @@ def list_to_map(dis_label):
     return dis_map
 
 
-def get_dis(data_dir, prefix, discourse_tag, cut_down_len, metamap=False):
+def get_data(encoder, data_dir, prefix, cut_down_len):
     # we are not padding anything in here, this is just repeating
-    s1 = {}
-    target = {}
-    meta = {}
-    dis_map = list_to_map(get_labels(discourse_tag))
-    logging.info(dis_map)
+    text = {}
+    label = {}
+    label_size = 4577 # <TODO> 42 if not fine-grained
 
     for data_type in ['train', 'valid', 'test']:
-        s1[data_type], meta[data_type], target[data_type] = [], [], []
-        text_path = pjoin(data_dir, prefix + "_" + data_type + ".tsv")
-        if not os.path.exists(text_path): continue
-        with open(text_path, 'r') as f:
+        text[data_type], label[data_type] = [], []
+        data_path = pjoin(data_dir, prefix + "_" + data_type + ".tsv")
+        if not os.path.exists(data_path): continue
+        with open(data_path, 'r') as f:
             for line in f:
                 columns = line.strip().split('\t')
-                if len(columns[0].split()) > cut_down_len: columns[0] = ' '.join(columns[0].split()[:cut_down_len]) #<TODO>:remove
-                s1[data_type].append(columns[0].lower()) # Lower
-                if discourse_tag == 'csu' or discourse_tag == 'pp':
-                    multi_label = np.zeros(4577, dtype='float32') # <YUHUI> ugly, len(dismap)
-                    # multi_label = np.zeros(len(dis_map), dtype='float32')
-                    if len(columns) == 2:
-                        for number in map(int, columns[1].split()):
-                            multi_label[number] = 1
-                    target[data_type].append(multi_label)
-                else:
-                    target[data_type].append(0) # No label
-        if metamap:
-            metamap_word2id = '/home/yuhuiz/Transformer/data/meta2id.json' # <TODO>
-            metamap_path = pjoin(data_dir, prefix.split('_')[0] + "_metamap_" + data_type + ".tsv") # <TODO>
-            meta2id = json.load(open(metamap_word2id))
-            with open(metamap_path, 'r') as f:
-                for line in f:
-                    tokens = line.strip().split()
-                    meta_id = []
-                    for token in tokens:
-                        if token in meta2id:
-                            meta_id.append(meta2id[token])
-                    meta[data_type].append(meta_id)
-            assert len(s1[data_type]) == len(meta[data_type])
-        assert len(s1[data_type]) == len(target[data_type])
-        target[data_type] = np.array(target[data_type])
-        
-        logging.info('** {0} DATA : Found {1} pairs of {2} sentences.'.format(
-            data_type.upper(), len(s1[data_type]), data_type))
+                tokens = [encoder.get(token, encoder['_unk_']) for token in columns[0].split()[:cut_down_len]]
+                text[data_type].append(tokens)
+                multi_label = np.zeros(label_size, dtype='float32') 
+                if len(columns) == 2:
+                    for number in map(int, columns[1].split()):
+                        multi_label[number] = 1
+                label[data_type].append(multi_label)
+        assert len(text[data_type]) == len(label[data_type])
+        label[data_type] = np.array(label[data_type])
+        logging.info('** {0} DATA : Found {1} pairs of {2} sentences.'.format(data_type.upper(), len(text[data_type]), data_type))
 
-    train = {'s1': s1['train'], 'label': target['train'], 'metamap': np.array(meta['train'])}
-    dev = {'s1': s1['valid'], 'label': target['valid'], 'metamap': np.array(meta['valid'])}
-    test = {'s1': s1['test'], 'label': target['test'], 'metamap': np.array(meta['test'])}
-    return train, dev, test
+    train = {'text': text['train'], 'label': label['train']}
+    valid = {'text': text['valid'], 'label': label['valid']}
+    test = {'text': text['test'], 'label': label['test']}
+    return train, valid, test
