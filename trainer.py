@@ -180,7 +180,7 @@ def train_epoch_csu(epoch):
         loss = model.compute_clf_loss(clf_output, b.label)
         if params.lm_coef != 0.0:
             lm_loss = model.compute_lm_loss(text_y_hat, b.text_y, b.text_loss_mask)
-            loss = params.lm_coef * lm_loss
+            loss += params.lm_coef * lm_loss
 
         all_costs.append(loss.data.item())
         
