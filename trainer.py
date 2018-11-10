@@ -251,9 +251,71 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
     ))
 
 
-"""
-Train model on Discourse Classification task
-"""
+def train_epoch_sage(epoch):
+    # initialize
+    logger.info('\nTRAINING : Epoch {}'.format(epoch))
+    model.train()
+    all_costs = []
+    text = train['text']
+
+    for stidx in range(0, text.shape[1], params.bptt_size):
+        # prepare batch      
+        text_batch = pad_batch(text[:, stidx: stidx + params.bptt_size], encoder, pad_start_end=True)
+        b = Batch(text_batch, [], encoder['_pad_'])
+
+        # model forward
+        text_y_hat = model(b, clf=False, lm=True)
+
+        # loss
+        loss = model.compute_lm_loss(text_y_hat, b.text_y, b.text_loss_mask)
+        all_costs.append(loss.data.item())
+
+        # backward
+        model_opt.optimizer.zero_grad()
+        loss.backward()
+
+        # optimizer step
+        model_opt.step()
+
+        # log and reset
+        if len(all_costs) == params.log_interval:
+            logger.info('{}; loss {}; perplexity: {}; lr: {}'.format(
+                stidx, 
+                round(np.mean(all_costs), 2),
+                round(np.exp(np.mean(all_costs)), 2),
+                model_opt.rate(),
+            ))
+            all_costs = []
+
+    # save
+    torch.save(model, os.path.join(params.outputdir, "model-{}.pickle".format(epoch)))
+
+
+def evaluate_epoch_sage(epoch, eval_type='valid'):
+    # initialize
+    logger.info('\n{} : Epoch {}'.format(eval_type.upper(), epoch))
+    model.eval()
+    text = valid['text'] if eval_type == 'valid' else test['text']
+    all_costs = []
+
+    for stidx in range(0, text.shape[1], params.bptt_size):
+        # prepare batch
+        text_batch = pad_batch(text[stidx: stidx + params.batch_size], encoder, pad_start_end=True)
+        b = Batch(text_batch, [], encoder['_pad_'])
+
+        # model forward
+        text_y_hat = model(b, clf=False, lm=True)
+
+        # loss
+        loss = model.compute_lm_loss(text_y_hat, b.text_y, b.text_loss_mask)
+        all_costs.append(loss.data.item())
+
+    logger.info('loss {}; perplexity: {}'.format(
+        round(np.mean(all_costs), 2),
+        round(np.exp(np.mean(all_costs)), 2),
+    ))
+
+
 if __name__ == '__main__':
     epoch = 1
     if params.corpus == 'pp':
@@ -267,10 +329,10 @@ if __name__ == '__main__':
             evaluate_epoch_csu(epoch, eval_type='valid')
             evaluate_epoch_csu(epoch, eval_type='test')
             epoch += 1
-    # elif params.corpus == 'sage':
-    #     while not stop_training and epoch <= params.n_epochs:
-    #         train_epoch_sage(epoch)
-    #         evaluate_epoch_sage(epoch)
-    #         evaluate_epoch_sage(epoch, eval_type='test')
-    #         epoch += 1
+    elif params.corpus == 'sage':
+        while epoch <= params.n_epochs:
+            train_epoch_sage(epoch)
+            evaluate_epoch_sage(epoch)
+            evaluate_epoch_sage(epoch, eval_type='test')
+            epoch += 1
 
