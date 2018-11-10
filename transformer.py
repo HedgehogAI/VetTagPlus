@@ -255,7 +255,10 @@ class Transformer(nn.Module):
 
         self.classifier = nn.Linear(config['d_model'], config['n_classes'])#, dropout=config['dpout'])
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
-        self.bce_loss = nn.BCEWithLogitsLoss()
+        self.bce_loss = nn.BCEWithLogitsLoss(reduce=False)
+        self.parents = json.load(open('data/parents.json'))
+        self.id2label = json.load(open('data/labels.json'))
+        self.label2id = dict([(j, i) for i, j in enumerate(self.id2label)])
 
     def encode(self, tgt, tgt_mask):
         # tgt, tgt_mask need to be on CUDA before being put in here
@@ -285,16 +288,34 @@ class Transformer(nn.Module):
             text_y = self.generator(u_h)
             ret.append(text_y)
         return ret[0] if len(ret) == 1 else ret
-        
 
     def compute_clf_loss(self, logits, labels):
         loss = self.bce_loss(logits, labels)
-        return loss
+        return loss.mean()
 
     def compute_lm_loss(self, text_h, text_y, text_loss_mask):
         loss = self.ce_loss(text_h.contiguous().view(-1, self.config['n_words']), text_y.view(-1)).view(text_h.size(0), -1)
         loss *= text_loss_mask  # mask sequence loss
         return loss.mean()
+
+    def compute_hierachical_loss(self, logits, labels):
+        bce_loss = self.bce_loss(logits, labels)
+        loss, cnt = 0, 0
+        for i in range(logits.shape[0]): 
+            for j in range(logits.shape[1]):
+                did = self.id2label[j]
+                flag = True
+                now = did
+                while now in self.parents:
+                    now = self.parents[now]
+                    if now not in self.label2id: break
+                    if labels[i, self.label2id[now]] == 0:
+                        flag = False
+                        break
+                if flag: 
+                    loss += bce_loss[i, j]
+                    cnt += 1
+        return loss / cnt
 
 
 class LSTM(nn.Module):
@@ -306,7 +327,10 @@ class LSTM(nn.Module):
         self.config = config
         self.classifier = nn.Linear(config['d_model'], config['n_classes'])
         self.ce_loss = nn.CrossEntropyLoss(reduce=False)
-        self.bce_loss = nn.BCEWithLogitsLoss()
+        self.bce_loss = nn.BCEWithLogitsLoss(reduce=False)
+        self.parents = json.load(open('data/parents.json'))
+        self.id2label = json.load(open('data/labels.json'))
+        self.label2id = dict([(j, i) for i, j in enumerate(self.id2label)])
         
     def encode(self, tgt, lengths):
         return self.autolen_rnn(self.tgt_embed(tgt), lengths)
@@ -342,12 +366,31 @@ class LSTM(nn.Module):
     
     def compute_clf_loss(self, logits, labels):
         loss = self.bce_loss(logits, labels).mean()
-        return loss
+        return loss.mean()
     
     def compute_lm_loss(self, text_h, text_y, text_loss_mask):
         loss = self.ce_loss(text_h.contiguous().view(-1, self.config['n_words']), text_y.view(-1)).view(text_h.size(0), -1)
         loss *= text_loss_mask  # mask sequence loss
         return loss.mean()
+
+    def compute_hierachical_loss(self, logits, labels):
+        bce_loss = self.bce_loss(logits, labels)
+        loss, cnt = 0, 0
+        for i in range(logits.shape[0]): 
+            for j in range(logits.shape[1]):
+                did = self.id2label[j]
+                flag = True
+                now = did
+                while now in self.parents:
+                    now = self.parents[now]
+                    if now not in self.label2id: break
+                    if labels[i, self.label2id[now]] == 0:
+                        flag = False
+                        break
+                if flag: 
+                    loss += bce_loss[i, j]
+                    cnt += 1
+        return loss / cnt
 
 
 class CAML(nn.Module):
@@ -374,7 +417,8 @@ class CAML(nn.Module):
     def compute_clf_loss(self, logits, labels):
         return self.bce_loss(logits, labels).mean()
 
-class CNNM(nn.Module):
+
+class CNN(nn.Module):
     def __init__(self, config, tgt_embed):
         super(CNN, self).__init__()
         self.classifier = nn.Linear(config['n_metamap'], config['n_classes'])
@@ -425,8 +469,6 @@ def make_transformer_model(encoder, config, word_embeddings=None):
         generator,
     )
 
-    # This was important from their code.
-    # Initialize parameters with Glorot / fan_avg.
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
         if p.dim() > 1 and p.requires_grad is True:
@@ -464,8 +506,8 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
     logging.info(model.tgt_embed[0].lut.weight.data.norm())
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
-        if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
         if p.dim() > 1 and p.requires_grad is True:
+            if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
             nn.init.xavier_uniform(p)
     logging.info(model.tgt_embed[0].lut.weight.data.norm())
     return model

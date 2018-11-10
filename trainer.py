@@ -34,6 +34,7 @@ parser.add_argument("--init_emb", default=False, action='store_true', help="Init
 parser.add_argument("--pick_hid", default=True, action='store_true', help="Pick correct hidden states")
 parser.add_argument("--tied", default=True, action='store_true', help="Tie weights to embedding, should be always flagged True")
 parser.add_argument("--model_type", type=str, default="transformer", help="transformer|lstm|caml")
+parser.add_argument("--hierachical", default=False, action='store_true', help="hierachical training")
 # model
 parser.add_argument("--d_ff", type=int, default=2048, help="decoder nhid dimension")
 parser.add_argument("--d_model", type=int, default=512, help="decoder nhid dimension")
@@ -177,7 +178,8 @@ def train_epoch_csu(epoch):
         all_r.append(r)
         all_f1.append(f1)
  
-        loss = model.compute_clf_loss(clf_output, b.label)
+        if params.hierachical: loss = model.compute_hierachical_loss(clf_output, b.label)
+        else: loss = model.compute_clf_loss(clf_output, b.label)
         if params.lm_coef != 0.0:
             lm_loss = model.compute_lm_loss(text_y_hat, b.text_y, b.text_loss_mask)
             loss += params.lm_coef * lm_loss
@@ -239,6 +241,29 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
         
     valid_scores, valid_preds, valid_labels = np.array(valid_scores), np.array(valid_preds), np.array(valid_labels)
     np.save('{}/scores-{}.npy'.format(params.outputdir, epoch), valid_scores)
+    
+    if params.hierachical:
+        parents = json.load(open('data/parents.json'))
+        id2label = json.load(open('data/labels.json'))
+        label2id = dict([(j, i) for i, j in enumerate(id2label)])
+        for i in range(valid_preds.shape[0]): 
+            last_pred_i = valid_preds[i].copy()
+            while True:
+                for j in range(valid_preds.shape[1]):
+                    did = id2label[j]
+                    flag = True
+                    now = did
+                    while now in parents:
+                        now = parents[now]
+                        if now not in label2id: break
+                        if valid_preds[i, label2id[now]] == 0:
+                            flag = False
+                            break
+                    if not flag: 
+                        valid_preds[i, j] = 0.
+                if (valid_preds[i] == last_pred_i).all(): break
+                last_pred_i = valid_preds[i].copy()
+
     em = metrics.accuracy_score(valid_labels, valid_preds)
     p, r, f1, s = metrics.precision_recall_fscore_support(valid_labels, valid_preds, average='weighted')
 
