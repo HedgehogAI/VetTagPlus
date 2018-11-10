@@ -472,7 +472,7 @@ def make_transformer_model(encoder, config, word_embeddings=None):
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
         if p.dim() > 1 and p.requires_grad is True:
-            if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
+            # if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
             nn.init.xavier_uniform(p)
     return model
 
@@ -507,7 +507,7 @@ def make_lstm_model(encoder, config, word_embeddings=None): # , ctx_embeddings=N
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
         if p.dim() > 1 and p.requires_grad is True:
-            if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
+            # if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
             nn.init.xavier_uniform(p)
     logging.info(model.tgt_embed[0].lut.weight.data.norm())
     return model
@@ -523,7 +523,7 @@ def make_caml_model(encoder, config, word_embeddings=None):
     for p in model.parameters():
         # we won't update anything that has fixed parameters!
         if p.dim() > 1 and p.requires_grad is True:
-            if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
+            # if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
             nn.init.xavier_uniform(p)
     logging.info(model.tgt_embed[0].lut.weight.data.norm())
     return model

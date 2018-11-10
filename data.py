@@ -61,7 +61,7 @@ class Batch:
         self.text_lengths = (text[:, :-1] != pad_id).sum(axis=1) # <TODO> cuda or not 
         self.text_loss_mask = (self.text_y != pad_id).type(torch.float).cuda()
         self.text_mask = self.make_std_mask(self.text, pad_id)
-        self.label = np_to_var(label).cuda()
+        if len(label) != 0: self.label = np_to_var(label).cuda()
 
     @staticmethod
     def make_std_mask(tgt, pad_id):
