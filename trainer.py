@@ -195,7 +195,7 @@ def train_epoch_csu(epoch):
 
         # log and reset 
         if len(all_costs) == params.log_interval:
-            logger.info('{}; loss {}; em {}; p {}; r {}; f1 {}; lr: {}'.format(
+            logger.info('{}; loss {}; em {}; p {}; r {}; f1 {}; lr {}; embed_norm {}'.format(
                 stidx, 
                 round(np.mean(all_costs), 2),
                 round(np.mean(all_em), 3),
@@ -203,6 +203,7 @@ def train_epoch_csu(epoch):
                 round(np.mean(all_r), 3),
                 round(np.mean(all_f1), 3),
                 model_opt.rate(),
+                model.tgt_embed[0].lut.weight.data.norm()
             ))
             all_costs, all_em, all_p, all_r, all_f1 = [], [], [], [], []
 
@@ -304,11 +305,12 @@ def train_epoch_sage(epoch):
 
         # log and reset
         if len(all_costs) == params.log_interval:
-            logger.info('{}; loss {}; perplexity: {}; lr: {}'.format(
+            logger.info('{}; loss {}; perplexity: {}; lr {}; embed_norm: {}'.format(
                 stidx, 
                 round(np.mean(all_costs), 2),
                 round(np.exp(np.mean(all_costs)), 2),
                 model_opt.rate(),
+                model.tgt_embed[0].lut.weight.data.norm()
             ))
             all_costs = []
 
