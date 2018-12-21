@@ -17,7 +17,7 @@ parser.add_argument("--corpus", type=str, default='sage', help="sage|csu|pp")
 parser.add_argument("--hypes", type=str, default='hypes/default.json', help="load in a hyperparameter file")
 parser.add_argument("--outputdir", type=str, default='exp/', help="Output directory")
 parser.add_argument("--inputdir", type=str, default='', help="Input model dir")
-parser.add_argument("--cut_down_len", type=int, default="2147483647", help="sentence will be cut down if tokens num greater than this")
+parser.add_argument("--cut_down_len", type=int, default="600", help="sentence will be cut down if tokens num greater than this")
 # training
 parser.add_argument("--n_epochs", type=int, default=10)
 parser.add_argument("--bptt_size", type=int, default=50)
@@ -37,7 +37,7 @@ parser.add_argument("--model_type", type=str, default="transformer", help="trans
 parser.add_argument("--hierachical", default=False, action='store_true', help="hierachical training")
 # model
 parser.add_argument("--d_ff", type=int, default=2048, help="decoder nhid dimension")
-parser.add_argument("--d_model", type=int, default=512, help="decoder nhid dimension")
+parser.add_argument("--d_model", type=int, default=768, help="decoder nhid dimension")
 parser.add_argument("--n_heads", type=int, default=8, help="number of attention heads")
 parser.add_argument("--n_layers", type=int, default=6, help="decoder num layers")
 parser.add_argument("--n_lstm_layers", type=int, default=1, help="decoder num lstm layers")
