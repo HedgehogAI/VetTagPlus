@@ -281,11 +281,11 @@ def train_epoch_sage(epoch):
     logger.info('\nTRAINING : Epoch {}'.format(epoch))
     model.train()
     all_costs = []
-    text = train['text'].tolist()
+    text = train['text']
 
-    for stidx in range(0, text.shape[1], params.bptt_size):
+    for stidx in range(0, len(text[0]), params.bptt_size):
         # prepare batch      
-        text_batch = pad_batch(text[:, stidx: stidx + params.bptt_size], encoder, pad_start_end=True)
+        text_batch = pad_batch(text[:, stidx: stidx + params.bptt_size].tolist(), encoder, pad_start_end=True)
         b = Batch(text_batch, [], encoder['_pad_'])
 
         # model forward
@@ -320,12 +320,12 @@ def evaluate_epoch_sage(epoch, eval_type='valid'):
     # initialize
     logger.info('\n{} : Epoch {}'.format(eval_type.upper(), epoch))
     model.eval()
-    text = valid['text'].tolist() if eval_type == 'valid' else test['text'].tolist()
+    text = valid['text'] if eval_type == 'valid' else test['text']
     all_costs = []
 
-    for stidx in range(0, text.shape[1], params.bptt_size):
+    for stidx in range(0, len(text[0]), params.bptt_size):
         # prepare batch
-        text_batch = pad_batch(text[stidx: stidx + params.batch_size], encoder, pad_start_end=True)
+        text_batch = pad_batch(text[stidx: stidx + params.batch_size].tolist(), encoder, pad_start_end=True)
         b = Batch(text_batch, [], encoder['_pad_'])
 
         # model forward
