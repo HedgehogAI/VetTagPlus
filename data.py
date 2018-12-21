@@ -14,20 +14,6 @@ def batchify(data, bsz):
     return data  
 
 
-def embed_batch(batch, word_embeddings, ctx_embeddings, n_embeds=768):
-    # comes out (bsize, max_len, word_dim)
-    # original order is preserved
-    lengths = np.array([len(x) for x in batch])
-    max_len = np.max(lengths)
-    embed = np.zeros((len(batch), max_len, n_embeds))
-
-    for i in range(len(batch)):
-        for j in range(len(batch[i])):
-            embed[i, j, :] = word_embeddings[batch[i][j]] + ctx_embeddings[j]  # we sum them
-
-    return torch.from_numpy(embed).float(), lengths
-
-
 def pad_batch(batch, encoder, pad_start_end=True):
     # just build a numpy array that's padded
     max_len = -1
@@ -35,6 +21,7 @@ def pad_batch(batch, encoder, pad_start_end=True):
         for i in range(len(batch)):
             batch[i] = [encoder['_start_']] + batch[i] + [encoder['_end_']]
             max_len = max(max_len, len(batch[i]))
+    max_len += 1
     padded_batch = np.full((len(batch), max_len), encoder['_pad_'])  # fill in pad_id
     for i in range(len(batch)):
         for j in range(len(batch[i])):

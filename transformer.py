@@ -268,7 +268,7 @@ class Transformer(nn.Module):
         # batch_size, lengths
         corr_h = []
         for i, j in enumerate(lengths):
-            corr_h.append(h[i, j-1, :])
+            corr_h.append(h[i, j-2, :])
         corr_h = torch.stack(corr_h, dim=0)
         return corr_h
 
@@ -346,7 +346,7 @@ class LSTM(nn.Module):
 
     def pick_h(self, h, lengths):
         corr_h = []
-        for i, j in enumerate(lengths): corr_h.append(h[i, j-1, :])
+        for i, j in enumerate(lengths): corr_h.append(h[i, j-2, :])
         corr_h = torch.stack(corr_h, dim=0)
         return corr_h
     
