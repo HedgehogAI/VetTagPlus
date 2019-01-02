@@ -355,6 +355,12 @@ if __name__ == '__main__':
         model.config = config_model
         evaluate_epoch_csu(epoch, eval_type='test')
     elif params.corpus == 'csu':
+        # del model
+        # model = torch.load(params.inputdir)
+        # evaluate_epoch_csu(epoch, eval_type='test')
+        if len(params.inputdir) != 0:
+            logger.info('Load Model from %s' % (params.inputdir))
+            model.load_state_dict(torch.load(params.inputdir), strict=False)
         while epoch <= params.n_epochs:
             train_epoch_csu(epoch)
             evaluate_epoch_csu(epoch, eval_type='valid')
