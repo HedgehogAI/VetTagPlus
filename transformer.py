@@ -420,7 +420,6 @@ class CAML(nn.Module):
 class CNN(nn.Module):
     def __init__(self, config, tgt_embed):
         super(CNN, self).__init__()
-        self.classifier = nn.Linear(config['n_metamap'], config['n_classes'])
         self.bce_loss = nn.BCEWithLogitsLoss()
         self.conv = nn.Conv1d(config['d_model'], config['n_kernels'], kernel_size=config['kernel_size'], padding=config['kernel_size'] / 2) # <YUHUI> bug: ksize is odd
         self.fc = nn.Linear(config['n_kernels'], config['n_classes'])
@@ -428,7 +427,7 @@ class CNN(nn.Module):
         self.embed_drop = nn.Dropout(p=config['dpout']) # 0.5
 
     def forward(self, batch, clf=True, lm=False):
-        x = self.tgt_embed(batch.s1)
+        x = self.tgt_embed(batch.text)
         x = self.embed_drop(x)
         x = x.transpose(1, 2)
         c = self.conv(x)

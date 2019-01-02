@@ -163,7 +163,7 @@ def train_epoch_csu(epoch):
 
     for stidx in range(0, len(text), params.batch_size):
         # prepare batch
-        text_batch = pad_batch(text[stidx: stidx + params.batch_size], encoder, pad_start_end=True)
+        text_batch = pad_batch(text[stidx: stidx + params.batch_size].tolist(), encoder, pad_start_end=True)
         label_batch = label[stidx: stidx + params.batch_size]
         
         b = Batch(text_batch, label_batch, encoder['_pad_'])
@@ -229,7 +229,7 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
 
     for stidx in range(0, len(text), params.batch_size):
         # prepare batch
-        text_batch = pad_batch(text[stidx: stidx + params.batch_size], encoder, pad_start_end=True)
+        text_batch = pad_batch(text[stidx: stidx + params.batch_size].tolist(), encoder, pad_start_end=True)
         label_batch = label[stidx: stidx + params.batch_size]
         
         b = Batch(text_batch, label_batch, encoder['_pad_'])
