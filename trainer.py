@@ -41,6 +41,8 @@ parser.add_argument("--d_model", type=int, default=768, help="decoder nhid dimen
 parser.add_argument("--n_heads", type=int, default=8, help="number of attention heads")
 parser.add_argument("--n_layers", type=int, default=6, help="decoder num layers")
 parser.add_argument("--n_lstm_layers", type=int, default=1, help="decoder num lstm layers")
+parser.add_argument("--n_kernels", type=int, default=50, help="caml kernel number")
+parser.add_argument("--kernel_size", type=int, default=4, help="caml kernel size")
 # gpu
 parser.add_argument("--seed", type=int, default=1234, help="seed")
 
@@ -126,6 +128,8 @@ config_model = {
     'pick_hid': params.pick_hid,
     'tied': params.tied,
     'n_lstm_layers': params.n_lstm_layers,
+    'n_kernels': params.n_kernels,
+    'kernel_size': params.kernel_size
 }
 
 if params.model_type == "lstm":
