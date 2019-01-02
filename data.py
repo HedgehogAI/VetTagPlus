@@ -16,11 +16,11 @@ def batchify(data, bsz):
 
 def pad_batch(batch, encoder, pad_start_end=True):
     # just build a numpy array that's padded
-    max_len = -1
+    max_len = np.max([len(x) for x in batch])
     if pad_start_end:
+        max_len += 2
         for i in range(len(batch)):
             batch[i] = [encoder['_start_']] + batch[i] + [encoder['_end_']]
-            max_len = max(max_len, len(batch[i]))
     max_len += 1
     padded_batch = np.full((len(batch), max_len), encoder['_pad_'])  # fill in pad_id
     for i in range(len(batch)):
@@ -56,13 +56,6 @@ class Batch:
         tgt_mask = (tgt != pad_id).unsqueeze(-2)
         tgt_mask = tgt_mask & Variable(subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
         return tgt_mask
-
-
-def list_to_map(dis_label):
-    dis_map = {}
-    for i, l in enumerate(dis_label):
-        dis_map[l] = i
-    return dis_map
 
 
 def get_data(encoder, data_dir, prefix, cut_down_len, label_size):
