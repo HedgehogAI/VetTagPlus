@@ -1,7 +1,6 @@
 {
   "data_dir": "/home/yuhuiz/Transformer/data/pp/",
-  "bpe_encoder_path": "/home/yuhuiz/Transformer/data/sage/encoder_bpe_50000.json",
-  "bpe_vocab_path": "/home/yuhuiz/Transformer/data/sage/vocab_50000.bpe",
+  "encoder_path": "/home/yuhuiz/Transformer/data/sage/encoder_bpe_50000.json",
   "pp": "pp_bpe_finegrained",
-  "label_num": 4577
+  "label_size": 4577
 }
