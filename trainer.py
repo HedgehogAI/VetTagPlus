@@ -290,7 +290,7 @@ def train_epoch_sage(epoch):
 
     for stidx in range(0, len(text[0]), params.bptt_size):
         # prepare batch      
-        text_batch = pad_batch(text[:, stidx: stidx + params.bptt_size].tolist(), encoder, pad_start_end=True)
+        text_batch = text[:, stidx: stidx + params.bptt_size + 1]
         b = Batch(text_batch, [], encoder['_pad_'])
 
         # model forward
@@ -331,7 +331,7 @@ def evaluate_epoch_sage(epoch, eval_type='valid'):
 
     for stidx in range(0, len(text[0]), params.bptt_size):
         # prepare batch
-        text_batch = pad_batch(text[stidx: stidx + params.batch_size].tolist(), encoder, pad_start_end=True)
+        text_batch = text[stidx: stidx + params.batch_size + 1]
         b = Batch(text_batch, [], encoder['_pad_'])
 
         # model forward

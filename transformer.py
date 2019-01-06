@@ -49,7 +49,7 @@ class Generator(nn.Module):
             self.proj.weight = word_embedding_weight  # tied-weights
 
     def forward(self, x):
-        return F.log_softmax(self.proj(x), dim=-1)
+        return self.proj(x)
 
 
 class SublayerConnection(nn.Module):

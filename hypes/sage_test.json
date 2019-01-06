@@ -1,6 +1,0 @@
-{
-  "data_dir": "/home/yuhuiz/Transformer/data/sage/",
-  "encoder_path": "/home/yuhuiz/Transformer/data/sage/encoder_bpe_50000.json",
-  "pp": "sage_bpe",
-  "label_size": 42
-}

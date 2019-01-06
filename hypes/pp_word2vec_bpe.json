@@ -1,6 +1,0 @@
-{
-  "data_dir": "/home/yuhuiz/Transformer/data/pp/",
-  "encoder_path": "/home/yuhuiz/Transformer/data/sage/word2vec_bpe/word2id.json",
-  "pp": "pp",
-  "label_size": 42
-}
