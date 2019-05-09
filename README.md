@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is the official cleaned repo we used to train and evaluate for VetTag paper. 
+This is the official cleaned repo we used to train, evaluate and interpret for [VetTag paper](https://www.nature.com/articles/s41746-019-0113-1). 
 
 Please feel free to contact `yuhui-zh15@mails.tsinghua.edu.cn` if you have any problem using these scripts. 
 
@@ -80,6 +80,11 @@ Then use the following command to evaluate the model.
 
 `python trainer.py --outputdir /path/to/exp/pp/ --corpus pp --hypes /path/to/hypes/pp.json --batch_size 5 --model_type transformer --cut_down_len 600 --hierachical --inputdir /path/to/exp/psvg/pretrained_model.pickle`
 
+### Statistics and Analysis
 
+Refer to `jupyter/snomed_stat.ipynb`, `jupyter/species_stat.ipynb`, `jupyter/length_label_distribution.ipynb` and `jupyter/analysis.ipynb`
 
+### Interpretation
+
+Refer to `jupyter/interpret.ipynb` and `jupyter/salient_words.ipynb`
 
