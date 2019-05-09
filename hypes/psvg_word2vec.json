@@ -1,6 +1,0 @@
-{
-  "data_dir": "/home/yuhuiz/Transformer/data/sage/sage/",
-  "encoder_path": "/home/yuhuiz/Transformer/data/sage/word2vec/word2id.json",
-  "sage": "sage_ascii_oneline",
-  "label_size": 4577
-}

@@ -1,7 +1,7 @@
 {
-  "data_dir": "/home/yuhuiz/Transformer/data/csu/",
-  "encoder_path": "/home/yuhuiz/Transformer/data/sage/word2vec_bpe/word2id.json",
-  "csu": "csu_bpe_finegrained",
-  "wordvec_path": "/home/yuhuiz/Transformer/data/sage/word2vec_bpe/wordvec.npy",
-  "label_size": 4577
+  "data_dir": "/path/to/data/csu/",
+  "encoder_path": "/path/to/data/encoder.json",
+  "prefix": "csu",
+  "label_size": 4577,
+  "wordvec_path": "/path/to/data/wordvec.npy"
 }

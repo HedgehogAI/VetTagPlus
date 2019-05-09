@@ -8,50 +8,78 @@ Please feel free to contact `yuhui-zh15@mails.tsinghua.edu.cn` if you have any p
 
 ## Usage
 
-- Unsupervised Learning
+### Unsupervised Learning
 
-Please create a json file in `hypes/` with the following format. `data_dir` represents for dataset directory, `encoder_path` represents for the dictionary which maps word to index, `sage` represents for dataset name, `label_size` represents for the label size.
+Please create a json file in `/path/to/hypes/` with the following format. 
 
 ```json
-sage.json
+psvg.json
 {
-  "data_dir": "/home/yuhuiz/Transformer/data/sage/",
-  "encoder_path": "/home/yuhuiz/Transformer/data/sage/encoder_bpe_50000.json",
-  "sage": "sage_ascii_oneline_bpe",
+  "data_dir": "/path/to/data/psvg/",
+  "encoder_path": "/path/to/data/encoder.json",
+  "prefix": "psvg_oneline",
   "label_size": 0
 }
 ```
 
-Please save data in `/home/yuhuiz/Transformer/data/sage/sage_ascii_oneline_bpe_train.tsv`, `/home/yuhuiz/Transformer/data/sage/sage_ascii_oneline_bpe_valid.tsv` and `/home/yuhuiz/Transformer/data/sage/sage_ascii_oneline_bpe_test.tsv` for training, validation and test. The file should only contain one line for text.
+- data_dir and prefix: save data in `/path/to/data/psvg/psvg_oneline_train.tsv`, `/path/to/data/psvg/psvg_oneline_valid.tsv` and `/path/to/data/psvg/psvg_oneline_test.tsv` for training, validation and test. The file should only contain one line for the whole text.
 
-Please save encoder in `/home/yuhuiz/Transformer/data/sage/encoder_bpe_50000.json`. It is a json file, like `{'hello': 0, 'world': 1}`.
+- encoder_path: save vocabulary in `/path/to/data/encoder.json`. It is a json file with format `{'hello': 0, 'world': 1, ...}`.
 
-Then use the following command to train and save the model in `exp/sage`
+- label_size: for unsupervised learning, label size should equal to 0.
 
-`python trainer.py --outputdir exp/sage  --train_emb --corpus sage --hypes hypes/sage.json --batch_size 5 --bptt_size 600 --model_type transformer`
+Then use the following command to train and save the model in `/path/to/exp/psvg/`.
 
+`python trainer.py --outputdir /path/to/exp/psvg/ --train_emb --corpus psvg --hypes /path/to/hypes/psvg.json --batch_size 5 --bptt_size 600 --model_type transformer`
 
-- Supervised Learning
+### Supervised Learning
 
-Please create a json file in `hypes/` with the following format. `data_dir` represents for dataset directory, `encoder_path` represents for the dictionary which maps word to index, `csu` represents for dataset name, `label_size` represents for the label size.
+Please create a json file in `/path/to/hypes/` with the following format. 
 
 ```json
 csu.json
 {
-  "data_dir": "/home/yuhuiz/Transformer/data/csu/",
-  "encoder_path": "/home/yuhuiz/Transformer/data/sage/encoder_bpe_50000.json",
-  "csu": "csu_bpe_finegrained",
+  "data_dir": "/path/to/data/csu/",
+  "encoder_path": "/path/to/data/encoder.json",
+  "prefix": "csu",
   "label_size": 4577
 }
 ```
 
-Please save data in `/home/yuhuiz/Transformer/data/csu/csu_bpe_finegrained_train.tsv`, `/home/yuhuiz/Transformer/data/csu/csu_bpe_finegrained_valid.tsv` and `/home/yuhuiz/Transformer/data/csu/csu_bpe_finegrained_test.tsv` for training, validation and test. The format should be `text\tlabel label label\n` for each line.
+- data_dir and prefix: save data in `/path/to/data/csu/csu_train.tsv`, `/path/to/data/csu/csu_valid.tsv` and `/path/to/data/csu/csu_test.tsv` for training, validation and test. The file contains lines of annotated clinical notes with format `text <tab> label_1 <space> label_2 <space> ... <space> label_k` for each line.
 
-Please save encoder in `/home/yuhuiz/Transformer/data/sage/encoder_bpe_50000.json`. It is a json file, like `{'hello': 0, 'world': 1}`.
+- encoder_path: save vocabulary in `/path/to/data/encoder.json` (the same file for unsupervised learning). It is a json file with format `{'hello': 0, 'world': 1, ...}`.
 
-Then use the following command to train and save the model in `exp/csu/`
+- label_size: for supervised learning, we use 4577 finegrained SNOMED diagnosis codes.
 
-`python trainer.py --outputdir exp/csu/ --corpus csu --hypes hypes/csu_finegrained.json --batch_size 5 --model_type lstm/transformer --cut_down_len 600 --train_emb --hierachical`
+Then use the following command to train and save the model in `/path/to/exp/csu/`.
+
+`python trainer.py --outputdir /path/to/exp/csu/ --corpus csu --hypes /path/to/hypes/csu.json --batch_size 5 --model_type transformer --cut_down_len 600 --train_emb --hierachical --inputdir /path/to/exp/psvg/pretrained_model.pickle`
+
+### External Evaluation
+
+Please create a json file in `/path/to/hypes/` with the following format. 
+
+```json
+pp.json
+{
+  "data_dir": "/path/to/data/pp/",
+  "encoder_path": "/path/to/data/encoder.json",
+  "prefix": "pp",
+  "label_size": 4577
+}
+```
+
+- data_dir and prefix: save data in `/path/to/data/csu/pp_test.tsv` for test. The file contains lines of annotated clinical notes with format `text <tab> label_1 <space> label_2 <space> ... <space> label_k` for each line.
+
+- encoder_path: save vocabulary in `/path/to/data/encoder.json` (the same file for unsupervised learning). It is a json file with format `{'hello': 0, 'world': 1, ...}`.
+
+- label_size: for supervised learning, we use 4577 finegrained SNOMED diagnosis codes (the same for supervised learning).
+
+Then use the following command to evaluate the model.
+
+`python trainer.py --outputdir /path/to/exp/pp/ --corpus pp --hypes /path/to/hypes/pp.json --batch_size 5 --model_type transformer --cut_down_len 600 --hierachical --inputdir /path/to/exp/psvg/pretrained_model.pickle`
+
 
 
 

@@ -13,7 +13,7 @@ from sklearn import metrics
 
 parser = argparse.ArgumentParser(description='Clinical Dataset')
 # paths
-parser.add_argument("--corpus", type=str, default='sage', help="sage|csu|pp")
+parser.add_argument("--corpus", type=str, default='psvg', help="psvg|csu|pp")
 parser.add_argument("--hypes", type=str, default='hypes/default.json', help="load in a hyperparameter file")
 parser.add_argument("--outputdir", type=str, default='exp/', help="Output directory")
 parser.add_argument("--inputdir", type=str, default='', help="Input model dir")
@@ -74,9 +74,9 @@ Default json file loading
 """
 json_config = json.load(open(params.hypes))
 data_dir = json_config['data_dir']
-prefix = json_config[params.corpus]
+prefix = json_config['prefix']
 encoder_path = json_config['encoder_path']
-label_size = json_config['label_size'] # 42, 4577 if not finegrained
+label_size = json_config['label_size']
 if params.init_emb: wordvec_path = json_config['wordvec_path']
 
 """
@@ -94,7 +94,7 @@ DATA
 """
 train, valid, test = get_data(encoder, data_dir, prefix, params.cut_down_len, label_size) 
 max_len = 0.
-if params.corpus == 'sage':
+if params.corpus == 'psvg':
     train['text'] = batchify(np.array(train['text'][0]), params.batch_size)
     valid['text'] = batchify(np.array(valid['text'][0]), params.batch_size)
     test['text'] = batchify(np.array(test['text'][0]), params.batch_size)
@@ -281,7 +281,7 @@ def evaluate_epoch_csu(epoch, eval_type='valid'):
     ))
 
 
-def train_epoch_sage(epoch):
+def train_epoch_psvg(epoch):
     # initialize
     logger.info('\nTRAINING : Epoch {}'.format(epoch))
     model.train()
@@ -322,7 +322,7 @@ def train_epoch_sage(epoch):
     torch.save(model, os.path.join(params.outputdir, "model-{}.pickle".format(epoch)))
 
 
-def evaluate_epoch_sage(epoch, eval_type='valid'):
+def evaluate_epoch_psvg(epoch, eval_type='valid'):
     # initialize
     logger.info('\n{} : Epoch {}'.format(eval_type.upper(), epoch))
     model.eval()
@@ -366,10 +366,10 @@ if __name__ == '__main__':
             evaluate_epoch_csu(epoch, eval_type='valid')
             evaluate_epoch_csu(epoch, eval_type='test')
             epoch += 1
-    elif params.corpus == 'sage':
+    elif params.corpus == 'psvg':
         while epoch <= params.n_epochs:
-            train_epoch_sage(epoch)
-            evaluate_epoch_sage(epoch)
-            evaluate_epoch_sage(epoch, eval_type='test')
+            train_epoch_psvg(epoch)
+            evaluate_epoch_psvg(epoch)
+            evaluate_epoch_psvg(epoch, eval_type='test')
             epoch += 1
 
