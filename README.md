@@ -84,6 +84,13 @@ Then use the following command to evaluate the model.
 
 Refer to `jupyter/snomed_stat.ipynb`, `jupyter/species_stat.ipynb`, `jupyter/length_label_distribution.ipynb` and `jupyter/analysis.ipynb`
 
+### Hierarchical Training
+
+Two files are required: `parents.json` and `labels.json` (in `data` dir).
+
+- labels.json: the format is [SNOMED_ID_1, SNOMED_ID_2, …, SNOMED_ID_4577], which is all 4577 SNOMED labels we use. 
+- parents.json: the format is {SNOMED_ID_i: parent_of_SNOMED_ID_i}, which is all SNOMED labels and their parents in the shortest path from the root node (introduced in the method section).
+
 ### Interpretation
 
 Refer to `jupyter/interpret.ipynb` and `jupyter/salient_words.ipynb`
