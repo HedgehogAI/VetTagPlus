@@ -58,7 +58,7 @@ class Batch:
         return tgt_mask
 
 
-def get_data(encoder, data_dir, prefix, cut_down_len, label_size):
+def get_data(encoder, data_dir, prefix, cut_down_len, label_size, char=False):
     # we are not padding anything in here, this is just repeating
     text = {}
     label = {}
@@ -70,7 +70,10 @@ def get_data(encoder, data_dir, prefix, cut_down_len, label_size):
         with open(data_path, 'r') as f:
             for line in f:
                 columns = line.strip().split('\t')
-                tokens = [encoder.get(token, encoder['_unk_']) for token in columns[0].split()[:cut_down_len]]
+                if not char:
+                    tokens = [encoder.get(token, encoder['_unk_']) for token in columns[0].split()[:cut_down_len]]
+                else:
+                    tokens = [encoder.get(token, encoder['_unk_']) for token in list(columns[0])[:cut_down_len]]
                 text[data_type].append(tokens)
                 multi_label = np.zeros(label_size, dtype='float32') 
                 if len(columns) == 2:

@@ -6,14 +6,14 @@ import numpy as np
 import random
 import torch
 from data import get_data, pad_batch, batchify, Batch
-from transformer import NoamOpt, make_transformer_model, make_lstm_model, make_caml_model
+from transformer import NoamOpt, make_transformer_model, make_lstm_model, make_caml_model, make_cnn_model
 import logging
 from sklearn import metrics
 
 
 parser = argparse.ArgumentParser(description='Clinical Dataset')
 # paths
-parser.add_argument("--corpus", type=str, default='psvg', help="psvg|csu|pp")
+parser.add_argument("--corpus", type=str, default='psvg', help="psvg|csu|pp|cnn")
 parser.add_argument("--hypes", type=str, default='hypes/default.json', help="load in a hyperparameter file")
 parser.add_argument("--outputdir", type=str, default='exp/', help="Output directory")
 parser.add_argument("--inputdir", type=str, default='', help="Input model dir")
@@ -35,6 +35,7 @@ parser.add_argument("--pick_hid", default=True, action='store_true', help="Pick 
 parser.add_argument("--tied", default=True, action='store_true', help="Tie weights to embedding, should be always flagged True")
 parser.add_argument("--model_type", type=str, default="transformer", help="transformer|lstm|caml")
 parser.add_argument("--hierachical", default=False, action='store_true', help="hierachical training")
+parser.add_argument("--char", default=False, action='store_true', help="Use character model")
 # model
 parser.add_argument("--d_ff", type=int, default=2048, help="decoder nhid dimension")
 parser.add_argument("--d_model", type=int, default=768, help="decoder nhid dimension")
@@ -92,7 +93,7 @@ n_special = 4
 """
 DATA
 """
-train, valid, test = get_data(encoder, data_dir, prefix, params.cut_down_len, label_size) 
+train, valid, test = get_data(encoder, data_dir, prefix, params.cut_down_len, label_size, char=params.char) 
 max_len = 0.
 if params.corpus == 'psvg':
     train['text'] = batchify(np.array(train['text'][0]), params.batch_size)
@@ -138,6 +139,9 @@ if params.model_type == "lstm":
 elif params.model_type == 'caml':
     logger.info('model caml')
     model = make_caml_model(encoder, config_model, word_embeddings)
+elif params.model_type == 'cnn':
+    logger.info('model cnn')
+    model = make_cnn_model(encoder, config_model, word_embeddings)
 else:
     logger.info('model transformer')
     model = make_transformer_model(encoder, config_model, word_embeddings)

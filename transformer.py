@@ -525,3 +525,19 @@ def make_caml_model(encoder, config, word_embeddings=None):
             nn.init.xavier_uniform(p)
     logging.info(model.tgt_embed[0].lut.weight.data.norm())
     return model
+
+def make_cnn_model(encoder, config, word_embeddings=None):
+    tgt_embed = nn.Sequential(Embeddings(encoder, config, word_embeddings))
+    tgt_embed.d_model = 1
+    model = CNN(
+        config,
+        tgt_embed,
+    )
+    for p in model.parameters():
+        # we won't update anything that has fixed parameters!
+        if p.dim() > 1 and p.requires_grad is True:
+            # if p.shape[0] == 48775: continue # <ZYH>: VERY UGLY WAY TO SOLVE BUG
+            nn.init.xavier_uniform(p)
+    logging.info(model.tgt_embed[0].lut.weight.data.norm())
+    return model
+
